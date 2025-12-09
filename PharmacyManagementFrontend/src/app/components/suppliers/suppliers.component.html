@@ -1,0 +1,115 @@
+<div class="suppliers-container">
+  <div class="suppliers-header">
+    <h1>Supplier Management</h1>
+    <div class="header-actions">
+      <div class="search-box">
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Search suppliers..." 
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()">
+      </div>
+      <button 
+        *ngIf="authService.isAdmin()" 
+        class="add-btn" 
+        (click)="openForm()">
+        Add Supplier
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+    <button class="close-btn" (click)="clearMessages()">&times;</button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-error">
+    {{ errorMessage }}
+    <button class="close-btn" (click)="clearMessages()">&times;</button>
+  </div>
+
+  <div *ngIf="showForm" class="form-modal">
+    <div class="form-container">
+      <h2>{{ editingSupplier ? 'Edit Supplier' : 'Add New Supplier' }}</h2>
+      <form (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="name">Supplier Name *</label>
+          <input 
+            type="text" 
+            id="name" 
+            class="form-control" 
+            [(ngModel)]="supplierForm.name" 
+            name="name" 
+            required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input 
+            type="email" 
+            id="email" 
+            class="form-control" 
+            [(ngModel)]="supplierForm.email" 
+            name="email" 
+            required>
+        </div>
+
+        <div class="form-group">
+          <label for="phoneNumber">Phone Number</label>
+          <input 
+            type="tel" 
+            id="phoneNumber" 
+            class="form-control" 
+            [(ngModel)]="supplierForm.phoneNumber" 
+            name="phoneNumber">
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="save-btn" [disabled]="loading">
+            {{ loading ? (editingSupplier ? 'Updating...' : 'Adding...') : (editingSupplier ? 'Update Supplier' : 'Add Supplier') }}
+          </button>
+          <button type="button" class="cancel-btn" (click)="closeForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div *ngIf="loading && !showForm" class="loading">
+    <div class="spinner"></div>
+    <p>Loading suppliers...</p>
+  </div>
+
+  <div *ngIf="!loading" class="suppliers-grid">
+    <div *ngFor="let supplier of filteredSuppliers" class="supplier-card">
+      <div class="supplier-header">
+        <h3>{{ supplier.name }}</h3>
+      </div>
+      
+      <div class="supplier-details">
+        <div class="detail-item">
+          <span class="label">Email:</span>
+          <span class="value">{{ supplier.email }}</span>
+        </div>
+        
+        <div class="detail-item" *ngIf="supplier.phoneNumber">
+          <span class="label">Phone:</span>
+          <span class="value">{{ supplier.phoneNumber }}</span>
+        </div>
+        
+        <div class="detail-item">
+          <span class="label">Supplier ID:</span>
+          <span class="value">#{{ supplier.supplierId }}</span>
+        </div>
+      </div>
+      
+      <div class="supplier-actions" *ngIf="authService.isAdmin()">
+        <button class="edit-btn" (click)="editSupplier(supplier)">Edit</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && filteredSuppliers.length === 0" class="no-results">
+    <p>{{ searchTerm ? 'No suppliers found matching your search.' : 'No suppliers available.' }}</p>
+  </div>
+</div>

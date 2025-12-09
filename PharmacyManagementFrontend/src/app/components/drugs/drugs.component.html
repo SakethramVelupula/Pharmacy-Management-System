@@ -1,0 +1,149 @@
+<div class="drugs-container">
+  <div class="drugs-header">
+    <h1>{{ authService.isAdmin() ? 'Drug Management' : 'Available Drugs' }}</h1>
+    <div class="header-actions">
+      <div class="search-box">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="searchDrugs()" 
+          placeholder="Search drugs..." 
+          class="search-input">
+      </div>
+      <button 
+        *ngIf="authService.isAdmin()" 
+        class="add-btn" 
+        (click)="showAddDrugForm()">
+        Add New Drug
+      </button>
+    </div>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+    <button class="close-btn" (click)="clearMessages()">×</button>
+  </div>
+  
+  <div *ngIf="errorMessage" class="alert alert-error">
+    {{ errorMessage }}
+    <button class="close-btn" (click)="clearMessages()">×</button>
+  </div>
+
+  <!-- Add/Edit Drug Form -->
+  <div *ngIf="showAddForm" class="form-modal">
+    <div class="form-container">
+      <h2>{{ editingDrug ? 'Edit Drug' : 'Add New Drug' }}</h2>
+      <form (ngSubmit)="saveDrug()">
+        <div class="form-row" *ngIf="!editingDrug">
+          <div class="form-group">
+            <label>Drug Name</label>
+            <input type="text" [(ngModel)]="drugForm.name" name="name" required class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Manufacturer</label>
+            <input type="text" [(ngModel)]="drugForm.manufacturer" name="manufacturer" required class="form-control">
+          </div>
+        </div>
+
+        <div class="form-row" *ngIf="editingDrug">
+          <div class="form-group">
+            <label>Drug Name</label>
+            <input type="text" [value]="editingDrug.name" class="form-control" readonly>
+          </div>
+          <div class="form-group">
+            <label>Manufacturer</label>
+            <input type="text" 
+              [(ngModel)]="drugForm.manufacturer" 
+              name="manufacturer" 
+              required 
+              class="form-control" 
+              [readonly]="!isPlaceholderDrug()">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Price ($)</label>
+          <input type="number" [(ngModel)]="drugForm.price" name="price" required class="form-control" step="0.01">
+        </div>
+
+        <div class="form-group">
+          <label>Storage Instructions</label>
+          <textarea [(ngModel)]="drugForm.storageInstructions" name="storageInstructions" class="form-control" rows="3" placeholder="Optional storage instructions"></textarea>
+        </div>
+
+        <div class="form-group" *ngIf="!editingDrug">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="drugForm.isPrescriptionRequired" name="isPrescriptionRequired">
+            Prescription Required
+          </label>
+        </div>
+
+        <div class="form-group" *ngIf="editingDrug">
+          <label class="checkbox-label">
+            <input type="checkbox" 
+              [(ngModel)]="drugForm.isPrescriptionRequired" 
+              name="isPrescriptionRequired"
+              [disabled]="!isPlaceholderDrug()">
+            Prescription Required
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="save-btn">{{ editingDrug ? 'Update' : 'Add' }} Drug</button>
+          <button type="button" class="cancel-btn" (click)="cancelForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading drugs...</p>
+  </div>
+
+  <!-- Drugs Grid -->
+  <div *ngIf="!isLoading" class="drugs-grid">
+    <div *ngFor="let drug of filteredDrugs" class="drug-card" [class.out-of-stock]="drug.stock === 0">
+      <div class="drug-header">
+        <h3>{{ drug.name }}</h3>
+        <div class="drug-badges">
+          <span *ngIf="drug.manufacturer === 'TBD'" class="placeholder-badge">Needs Details</span>
+          <span class="drug-prescription" [class.required]="drug.isPrescriptionRequired">
+            {{ drug.isPrescriptionRequired ? 'Prescription Required' : 'No Prescription Required' }}
+          </span>
+        </div>
+      </div>
+      
+      <div class="drug-info">
+        <div class="drug-details">
+          <div class="detail-item">
+            <span class="label">Price:</span>
+            <span class="value">${{ drug.price }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Stock:</span>
+            <span class="value" [class.low-stock]="drug.stock < 10">{{ drug.stock }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">Manufacturer:</span>
+            <span class="value">{{ drug.manufacturer }}</span>
+          </div>
+        </div>
+        <div *ngIf="drug.storageInstructions" class="storage-instructions">
+          <p><strong>Storage:</strong> {{ drug.storageInstructions }}</p>
+        </div>
+      </div>
+
+      <div *ngIf="authService.isAdmin()" class="drug-actions">
+        <button class="edit-btn" (click)="editDrug(drug)">Edit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Results -->
+  <div *ngIf="!isLoading && filteredDrugs.length === 0" class="no-results">
+    <p>No drugs found.</p>
+  </div>
+</div>

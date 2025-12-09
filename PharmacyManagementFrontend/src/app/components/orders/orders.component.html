@@ -1,0 +1,132 @@
+<div class="orders-container">
+  <div class="orders-header">
+    <h1>{{ authService.isAdmin() ? 'Order Management' : 'My Orders' }}</h1>
+    <div class="header-actions">
+      <div class="search-box">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearchChange()" 
+          placeholder="Search by Order ID or Drug Name..." 
+          class="search-input">
+      </div>
+      <div class="filter-box">
+        <select [(ngModel)]="statusFilter" (change)="onStatusFilterChange()" class="status-filter">
+          <option value="All">All Status</option>
+          <option *ngFor="let status of orderStatuses" [value]="status">{{ status }}</option>
+        </select>
+      </div>
+      <button 
+        *ngIf="authService.isDoctor()" 
+        class="add-btn" 
+        (click)="showCreateOrderForm()">
+        Create Order
+      </button>
+    </div>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+    <button class="close-btn" (click)="clearMessages()">×</button>
+  </div>
+  
+  <div *ngIf="errorMessage" class="alert alert-error">
+    {{ errorMessage }}
+    <button class="close-btn" (click)="clearMessages()">×</button>
+  </div>
+
+  <!-- Create Order Form -->
+  <div *ngIf="showAddForm" class="form-modal">
+    <div class="form-container">
+      <h2>Create New Order</h2>
+      <form (ngSubmit)="createOrder()">
+        <div class="form-group">
+          <label>Select Drug</label>
+          <select [(ngModel)]="orderForm.drugId" name="drugId" required class="form-control">
+            <option value="0">Select a drug...</option>
+            <option *ngFor="let drug of drugs" [value]="drug.drugId">
+              {{ drug.name }} - {{ drug.manufacturer }} (Stock: {{ drug.stock }})
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" [(ngModel)]="orderForm.quantity" name="quantity" required class="form-control" min="1">
+        </div>
+
+        <div class="form-group">
+          <label>Prescription Reference (Optional)</label>
+          <input type="text" [(ngModel)]="orderForm.prescriptionReference" name="prescriptionReference" class="form-control" maxlength="100" placeholder="Enter prescription reference">
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="save-btn">Create Order</button>
+          <button type="button" class="cancel-btn" (click)="cancelForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading orders...</p>
+  </div>
+
+  <!-- Orders Table -->
+  <div *ngIf="!isLoading" class="orders-table-container">
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Drug</th>
+          <th>Quantity</th>
+          <th>Status</th>
+          <th>Prescription Ref</th>
+          <th>Placed At</th>
+          <th *ngIf="authService.isAdmin()">Doctor ID</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of filteredOrders">
+          <td class="order-id">#{{ order.id }}</td>
+          <td class="drug-info">
+            <div class="drug-name">{{ order.drug?.name || getDrugName(order.drugId) }}</div>
+            <div class="drug-manufacturer">{{ order.drug?.manufacturer }}</div>
+          </td>
+          <td class="quantity">{{ order.quantity }}</td>
+          <td>
+            <span class="status-badge" [class]="getStatusClass(order.status)">
+              {{ order.status }}
+            </span>
+          </td>
+          <td>{{ order.prescriptionReference || 'N/A' }}</td>
+          <td>{{ order.placedAt | date:'short' }}</td>
+          <td *ngIf="authService.isAdmin()">{{ order.doctorId }}</td>
+          <td class="actions">
+            <div *ngIf="authService.isAdmin()" class="admin-actions">
+              <select 
+                [value]="order.status" 
+                (change)="updateOrderStatus(order, $any($event.target).value)"
+                class="status-select">
+                <option *ngFor="let status of orderStatuses" [value]="status">{{ status }}</option>
+              </select>
+              <button class="delete-btn" (click)="deleteOrder(order)">Delete</button>
+            </div>
+            <div *ngIf="authService.isDoctor()" class="doctor-actions">
+              <span class="view-only">View Only</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- No Results -->
+  <div *ngIf="!isLoading && filteredOrders.length === 0" class="no-results">
+    <p>No orders found.</p>
+  </div>
+</div>

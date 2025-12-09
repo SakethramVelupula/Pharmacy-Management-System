@@ -1,0 +1,123 @@
+<div class="inventory-container">
+  <div class="inventory-header">
+    <h1>Inventory Management</h1>
+    <div class="header-actions">
+      <div class="search-box">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="searchInventory()" 
+          placeholder="Search inventory..." 
+          class="search-input">
+      </div>
+      <button class="add-btn" (click)="showAddInventoryForm()">
+        Add Inventory
+      </button>
+    </div>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+    <button class="close-btn" (click)="clearMessages()">×</button>
+  </div>
+  
+  <div *ngIf="errorMessage" class="alert alert-error">
+    {{ errorMessage }}
+    <button class="close-btn" (click)="clearMessages()">×</button>
+  </div>
+
+  <!-- Add/Edit Inventory Form -->
+  <div *ngIf="showAddForm" class="form-modal">
+    <div class="form-container">
+      <h2>{{ editingInventory ? 'Edit Inventory' : 'Add New Inventory' }}</h2>
+      <form (ngSubmit)="saveInventory()">
+        <div class="form-group" *ngIf="!editingInventory">
+          <label>Drug Name</label>
+          <input 
+            type="text" 
+            [(ngModel)]="inventoryForm.drugName" 
+            name="drugName" 
+            required 
+            class="form-control" 
+            placeholder="Enter drug name or select from existing"
+            list="drugList">
+          <datalist id="drugList">
+            <option *ngFor="let drug of drugs" [value]="drug.name">
+              {{ drug.name }} - {{ drug.manufacturer }}
+            </option>
+          </datalist>
+          <small class="form-text">You can enter a new drug name or select from existing drugs</small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Supplier</label>
+            <select [(ngModel)]="inventoryForm.supplierId" name="supplierId" required class="form-control">
+              <option value="0">Select supplier...</option>
+              <option *ngFor="let supplier of suppliers" [value]="supplier.supplierId">
+                {{ supplier.name }} - {{ supplier.email }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="number" [(ngModel)]="inventoryForm.quantity" name="quantity" required class="form-control" min="1">
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="save-btn">{{ editingInventory ? 'Update' : 'Add' }} Inventory</button>
+          <button type="button" class="cancel-btn" (click)="cancelForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading inventory...</p>
+  </div>
+
+  <!-- Inventory Table -->
+  <div *ngIf="!isLoading" class="inventory-table-container">
+    <table class="inventory-table">
+      <thead>
+        <tr>
+          <th>Drug Name</th>
+          <th>Storage Instructions</th>
+          <th>Supplier</th>
+          <th>Current Stock</th>
+          <th>Status</th>
+          <th>Last Restock</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of filteredInventory" [class.low-stock-row]="isLowStock(item)">
+          <td class="drug-name">{{ item.drugName }}</td>
+          <td>{{ item.drugStorageInstructions || 'N/A' }}</td>
+          <td>{{ item.supplierName }}</td>
+          <td class="stock-quantity" [class.low-stock]="isLowStock(item)">
+            {{ item.quantity }}
+          </td>
+          <td>
+            <span class="status-badge" [class.low-stock]="isLowStock(item)" [class.in-stock]="!isLowStock(item)">
+              {{ isLowStock(item) ? 'Low Stock' : 'In Stock' }}
+            </span>
+          </td>
+          <td>{{ item.lastRestockDate | date:'short' }}</td>
+          <td class="actions">
+            <button class="edit-btn" (click)="editInventory(item)">Edit</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- No Results -->
+  <div *ngIf="!isLoading && filteredInventory.length === 0" class="no-results">
+    <p>No inventory items found.</p>
+  </div>
+</div>

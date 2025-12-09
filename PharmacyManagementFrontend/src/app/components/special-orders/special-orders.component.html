@@ -1,0 +1,139 @@
+<div class="special-orders-container">
+  <div class="special-orders-header">
+    <h1>{{ authService.isAdmin() ? 'Special Order Management' : 'My Special Orders' }}</h1>
+    <div class="header-actions">
+      <div class="search-box">
+        <input 
+          type="text" 
+          [(ngModel)]="searchTerm" 
+          (input)="onSearchChange()" 
+          placeholder="Search by drug name, manufacturer, or reason..." 
+          class="search-input">
+      </div>
+      <div class="filter-box">
+        <select [(ngModel)]="statusFilter" (change)="onStatusFilterChange()" class="status-filter">
+          <option value="All">All Status</option>
+          <option *ngFor="let status of specialOrderStatuses" [value]="status">{{ status }}</option>
+        </select>
+      </div>
+      <button 
+        *ngIf="authService.isDoctor()" 
+        class="add-btn" 
+        (click)="showCreateOrderForm()">
+        Request Special Order
+      </button>
+    </div>
+  </div>
+
+  <!-- Success/Error Messages -->
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+    <button class="close-btn" (click)="clearMessages()">×</button>
+  </div>
+  
+  <div *ngIf="errorMessage" class="alert alert-error">
+    {{ errorMessage }}
+    <button class="close-btn" (click)="clearMessages()">×</button>
+  </div>
+
+  <!-- Create Special Order Form -->
+  <div *ngIf="showAddForm" class="form-modal">
+    <div class="form-container">
+      <h2>Request Special Order</h2>
+      <form (ngSubmit)="createSpecialOrder()">
+        <div class="form-group">
+          <label>Drug Name *</label>
+          <input type="text" [(ngModel)]="orderForm.drugName" name="drugName" required class="form-control" maxlength="150" placeholder="Enter the drug name you need">
+        </div>
+
+        <div class="form-group">
+          <label>Manufacturer (Optional)</label>
+          <input type="text" [(ngModel)]="orderForm.manufacturer" name="manufacturer" class="form-control" maxlength="100" placeholder="Preferred manufacturer (if any)">
+        </div>
+
+        <div class="form-group">
+          <label>Reason for Special Order *</label>
+          <textarea [(ngModel)]="orderForm.reason" name="reason" required class="form-control" rows="4" placeholder="Explain why this special order is needed (patient condition, urgency, etc.)"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="save-btn">Submit Request</button>
+          <button type="button" class="cancel-btn" (click)="cancelForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading special orders...</p>
+  </div>
+
+  <!-- Special Orders Table -->
+  <div *ngIf="!isLoading" class="special-orders-table-container">
+    <table class="special-orders-table">
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Drug Name</th>
+          <th>Manufacturer</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Requested Date</th>
+          <th *ngIf="authService.isAdmin()">Doctor ID</th>
+          <th *ngIf="authService.isAdmin()">Admin Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of filteredOrders" [class]="getUrgencyClass(order.dateRequested)">
+          <td class="request-id">#{{ order.requestId }}</td>
+          <td class="drug-info">
+            <div class="drug-name">{{ order.drugName }}</div>
+          </td>
+          <td>{{ order.manufacturer || 'Any' }}</td>
+          <td class="reason-cell">
+            <div class="reason-text" [title]="order.reason">
+              {{ order.reason.length > 50 ? (order.reason | slice:0:50) + '...' : order.reason }}
+            </div>
+          </td>
+          <td>
+            <span class="status-badge" [class]="getStatusClass(order.status)">
+              {{ order.status }}
+            </span>
+          </td>
+          <td>{{ order.dateRequested | date:'short' }}</td>
+          <td *ngIf="authService.isAdmin()">{{ order.doctorId }}</td>
+          <td *ngIf="authService.isAdmin()" class="admin-notes">
+            {{ order.adminNotes || 'No notes' }}
+          </td>
+          <td class="actions">
+            <div *ngIf="authService.isAdmin()" class="admin-actions">
+              <select 
+                [value]="order.status" 
+                (change)="updateOrderStatus(order, $any($event.target).value)"
+                class="status-select">
+                <option *ngFor="let status of specialOrderStatuses" [value]="status">{{ status }}</option>
+              </select>
+            </div>
+            <div *ngIf="authService.isDoctor()" class="doctor-actions">
+              <span class="view-only">View Only</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- No Results -->
+  <div *ngIf="!isLoading && filteredOrders.length === 0" class="no-results">
+    <div class="no-results-icon">📋</div>
+    <h3>No Special Orders Found</h3>
+    <p *ngIf="authService.isDoctor()">You haven't made any special order requests yet.</p>
+    <p *ngIf="authService.isAdmin()">No special order requests from doctors.</p>
+    <button *ngIf="authService.isDoctor()" class="add-btn" (click)="showCreateOrderForm()">
+      Create Your First Special Order
+    </button>
+  </div>
+</div>

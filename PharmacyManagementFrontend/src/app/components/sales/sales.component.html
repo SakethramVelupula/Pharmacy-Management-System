@@ -1,0 +1,154 @@
+<div class="sales-container">
+  <div class="sales-header">
+    <h1>Sales Management & Analytics</h1>
+    <div class="date-filters">
+      <input 
+        type="date" 
+        [(ngModel)]="startDate" 
+        (change)="onDateFilterChange()" 
+        class="date-input">
+      <span>to</span>
+      <input 
+        type="date" 
+        [(ngModel)]="endDate" 
+        (change)="onDateFilterChange()" 
+        class="date-input">
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'analytics'" 
+      (click)="setActiveTab('analytics')">
+      Analytics Dashboard
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'sales'" 
+      (click)="setActiveTab('sales')">
+      Sales History
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Analytics Tab -->
+  <div *ngIf="activeTab === 'analytics' && analytics && !loading" class="analytics-content">
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card revenue">
+        <div class="card-icon">💰</div>
+        <div class="card-content">
+          <h3>Total Revenue</h3>
+          <p class="amount">{{ formatCurrency(analytics.totalRevenue) }}</p>
+        </div>
+      </div>
+      
+      <div class="summary-card sales">
+        <div class="card-icon">📊</div>
+        <div class="card-content">
+          <h3>Total Sales</h3>
+          <p class="count">{{ analytics.totalSales }}</p>
+        </div>
+      </div>
+      
+      <div class="summary-card average">
+        <div class="card-icon">📈</div>
+        <div class="card-content">
+          <h3>Average Order Value</h3>
+          <p class="amount">{{ formatCurrency(analytics.averageOrderValue) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-section">
+      <!-- Top Selling Drugs -->
+      <div class="chart-card">
+        <h3>Top Selling Drugs</h3>
+        <div class="top-drugs-list">
+          <div *ngFor="let drug of analytics.topSellingDrugs; let i = index" class="drug-item">
+            <div class="drug-rank">{{ i + 1 }}</div>
+            <div class="drug-info">
+              <span class="drug-name">{{ drug.drugName }}</span>
+              <span class="drug-stats">{{ drug.totalQuantity }} units • {{ formatCurrency(drug.totalRevenue) }}</span>
+            </div>
+            <div class="drug-bar">
+              <div class="bar-fill" [style.width.%]="(drug.totalRevenue / analytics.topSellingDrugs[0].totalRevenue) * 100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Methods -->
+      <div class="chart-card">
+        <h3>Payment Methods</h3>
+        <div class="payment-methods">
+          <div *ngFor="let payment of analytics.paymentMethods" class="payment-item">
+            <div class="payment-indicator" [style.background-color]="getPaymentMethodColor(payment.method)"></div>
+            <div class="payment-info">
+              <span class="payment-method">{{ payment.method }}</span>
+              <span class="payment-stats">{{ payment.count }} transactions • {{ formatCurrency(payment.amount) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Sales Chart -->
+    <div class="chart-card full-width">
+      <h3>Daily Sales Trend</h3>
+      <div class="daily-sales-chart">
+        <div *ngFor="let day of analytics.dailySales" class="day-bar">
+          <div class="bar" [style.height.px]="(day.revenue / analytics.totalRevenue) * 200"></div>
+          <span class="day-label">{{ formatDate(day.date) }}</span>
+          <span class="day-amount">{{ formatCurrency(day.revenue) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sales History Tab -->
+  <div *ngIf="activeTab === 'sales' && !loading" class="sales-content">
+    <div class="sales-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Sale ID</th>
+            <th>Date</th>
+            <th>Drug</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total Amount</th>
+            <th>Payment Method</th>
+            <th>Order ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let sale of sales">
+            <td>#{{ sale.salesId }}</td>
+            <td>{{ formatDate(sale.date) }}</td>
+            <td>{{ sale.drugName }}</td>
+            <td>{{ sale.quantity }}</td>
+            <td>{{ formatCurrency(sale.unitPrice) }}</td>
+            <td class="amount">{{ formatCurrency(sale.totalAmount) }}</td>
+            <td>
+              <span class="payment-badge" [style.background-color]="getPaymentMethodColor(sale.paymentMethod)">
+                {{ sale.paymentMethod }}
+              </span>
+            </td>
+            <td>#{{ sale.orderId }}</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div *ngIf="sales.length === 0" class="no-sales">
+        <p>No sales records found.</p>
+      </div>
+    </div>
+  </div>
+</div>
