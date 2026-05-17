@@ -1,0 +1,55 @@
+# ========================
+# .NET Build Artifacts
+# ========================
+**/bin/
+**/obj/
+
+# ========================
+# Visual Studio Files
+# ========================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ========================
+# .NET Secrets & Config
+# ========================
+appsettings.Development.json
+*.pfx
+*.key
+
+# ========================
+# Angular / Node
+# ========================
+**/node_modules/
+**/dist/
+**/.angular/cache/
+
+# ========================
+# IDE - VS Code
+# ========================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ========================
+# OS Files
+# ========================
+.DS_Store
+Thumbs.db
+
+# ========================
+# Logs & Temp
+# ========================
+*.log
+/tmp/
+/coverage/
+
+# ========================
+# Tracked Files Cleanup
+# ========================
+tracked_files.txt
