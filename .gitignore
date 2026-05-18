@@ -17,6 +17,7 @@
 # .NET Secrets & Config
 # ========================
 appsettings.Development.json
+Properties/launchSettings.json
 *.pfx
 *.key
 
