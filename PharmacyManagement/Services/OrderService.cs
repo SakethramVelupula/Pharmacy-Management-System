@@ -13,14 +13,16 @@ namespace PharmacyManagement.Services
         private readonly IOrderRepository _orderRepository;
         private readonly ApplicationDbContext _context;
         private readonly IDrugsService _drugsService;
+        private readonly IEmailService _emailService;
         private readonly IMapper _mapper;
         private readonly ILogger<OrderService> _logger;
 
-        public OrderService(IOrderRepository orderRepository, ApplicationDbContext context,IDrugsService drugsService, IMapper mapper, ILogger<OrderService> logger)
+        public OrderService(IOrderRepository orderRepository, ApplicationDbContext context, IDrugsService drugsService, IEmailService emailService, IMapper mapper, ILogger<OrderService> logger)
         {
             _orderRepository = orderRepository;
             _context = context;
             _drugsService = drugsService;
+            _emailService = emailService;
             _mapper = mapper;
             _logger = logger;
         }
@@ -56,6 +58,16 @@ namespace PharmacyManagement.Services
             var order = _mapper.Map<Order>(dto);
             order.DoctorId = userId; // Set DoctorId from authenticated user
             var createdOrder = await _orderRepository.CreateOrderAsync(order);
+
+            // Notify admin about new order
+            var doctor = await _context.Users.FindAsync(userId);
+            await _emailService.SendNewOrderNotificationAsync(
+                doctor?.UserName ?? "Unknown",
+                createdOrder.Id,
+                drug.Name,
+                dto.Quantity
+            );
+
             return _mapper.Map<OrderDto>(createdOrder);
         }
 
@@ -73,9 +85,14 @@ namespace PharmacyManagement.Services
                 await DeductInventoryAsync(existing.DrugId, existing.Quantity);
                 await _drugsService.UpdateDrugStockAsync(existing.DrugId);
                 existing.DateDispensed = DateTime.Now;
-                
-                // Auto-create sale record
                 await CreateSaleFromOrderAsync(existing.Id);
+
+                // Notify doctor order is delivered
+                var doctor = await _context.Users.FindAsync(existing.DoctorId);
+                if (doctor != null)
+                    await _emailService.SendOrderStatusEmailAsync(
+                        doctor.Email!, doctor.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Delivered"
+                    );
             }
             // If status changed from "Delivered" to something else, restore inventory
             else if (oldStatus == "Delivered" && dto.Status != "Delivered")
@@ -83,6 +100,15 @@ namespace PharmacyManagement.Services
                 await RestoreInventoryAsync(existing.DrugId, existing.Quantity);
                 await _drugsService.UpdateDrugStockAsync(existing.DrugId);
                 existing.DateDispensed = null;
+            }
+            else if (dto.Status == "Cancelled")
+            {
+                // Notify doctor order is cancelled
+                var doctor = await _context.Users.FindAsync(existing.DoctorId);
+                if (doctor != null)
+                    await _emailService.SendOrderStatusEmailAsync(
+                        doctor.Email!, doctor.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Cancelled"
+                    );
             }
 
             var updated = await _orderRepository.UpdateOrderAsync(existing);
