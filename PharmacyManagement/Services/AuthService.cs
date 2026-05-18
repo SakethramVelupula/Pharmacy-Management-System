@@ -9,11 +9,13 @@ namespace PharmacyManagement.Services
     public class AuthService : IAuthService
     {
         private readonly IAuthRepository _authRepository;
+        private readonly IEmailService _emailService;
         private readonly IMapper _mapper;
 
-        public AuthService(IAuthRepository authRepository, IMapper mapper)
+        public AuthService(IAuthRepository authRepository, IEmailService emailService, IMapper mapper)
         {
             _authRepository = authRepository;
+            _emailService = emailService;
             _mapper = mapper;
         }
 
@@ -23,7 +25,10 @@ namespace PharmacyManagement.Services
             user.UserName = model.Name;
             user.Role = "Doctor";
             var (isSuccess, message) = await _authRepository.RegisterAsync(user, model.Password);
-            //var (isSuccess, message) = await _authRepository.RegisterAsync(user, model.Password);
+
+            if (isSuccess)
+                await _emailService.SendWelcomeEmailAsync(model.Email, model.Name);
+
             return isSuccess ? "User registered successfully." : $"Registration failed: {message}";
         }
 
