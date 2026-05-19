@@ -10,6 +10,7 @@ namespace PharmaAPI.Profiles
         {
             CreateMap<Order, OrderDto>().ReverseMap();
             CreateMap<CreateOrderDto, Order>();
+            CreateMap<CreatePatientOrderDto, Order>();
             CreateMap<UpdateOrderDto, Order>();
         }
     }

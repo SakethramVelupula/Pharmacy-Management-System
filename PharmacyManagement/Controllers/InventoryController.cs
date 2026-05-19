@@ -67,7 +67,7 @@ namespace PharmacyManagement.Controllers
             }
         }
 
-        [HttpPut("update/{drugName}")]
+        [HttpPatch("update/{drugName}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateQuantity(string drugName, [FromBody] UpdateInventoryQuantityDto dto)
         {

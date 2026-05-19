@@ -39,9 +39,9 @@ namespace PharmacyManagement.Services
             return _mapper.Map<OrderDto?>(order);
         }
 
-        public async Task<IEnumerable<OrderDto>> GetOrdersByDoctorIdAsync(string doctorId)
+        public async Task<IEnumerable<OrderDto>> GetOrdersByUserIdAsync(string userId)
         {
-            var orders = await _orderRepository.GetOrdersByDoctorIdAsync(doctorId);
+            var orders = await _orderRepository.GetOrdersByUserIdAsync(userId);
             return _mapper.Map<IEnumerable<OrderDto>>(orders);
         }
 
@@ -56,13 +56,48 @@ namespace PharmacyManagement.Services
                 throw new InvalidOperationException("Insufficient stock available.");
 
             var order = _mapper.Map<Order>(dto);
-            order.DoctorId = userId; // Set DoctorId from authenticated user
+            order.PlacedById = userId;
             var createdOrder = await _orderRepository.CreateOrderAsync(order);
 
-            // Notify admin about new order
-            var doctor = await _context.Users.FindAsync(userId);
+            var placer = await _context.Users.FindAsync(userId);
             await _emailService.SendNewOrderNotificationAsync(
-                doctor?.UserName ?? "Unknown",
+                placer?.UserName ?? "Unknown",
+                createdOrder.Id,
+                drug.Name,
+                dto.Quantity
+            );
+
+            return _mapper.Map<OrderDto>(createdOrder);
+        }
+
+        public async Task<OrderDto> CreatePatientOrderAsync(CreatePatientOrderDto dto, string userId)
+        {
+            _logger.LogInformation("Creating patient order for User {UserId} and Drug {DrugId}", userId, dto.DrugId);
+
+            var drug = await _context.Drugs.FindAsync(dto.DrugId)
+                       ?? throw new KeyNotFoundException("Drug not found.");
+
+            if (!drug.IsPrescriptionRequired == false && string.IsNullOrWhiteSpace(dto.PrescriptionReference))
+                throw new InvalidOperationException("Prescription reference is required for this drug.");
+
+            if (drug.Stock < dto.Quantity)
+                throw new InvalidOperationException("Insufficient stock available.");
+
+            var order = new Order
+            {
+                DrugId = dto.DrugId,
+                Quantity = dto.Quantity,
+                PrescriptionReference = dto.PrescriptionReference,
+                PlacedById = userId,
+                Status = "Pending",
+                PlacedAt = DateTime.Now
+            };
+
+            var createdOrder = await _orderRepository.CreateOrderAsync(order);
+
+            var placer = await _context.Users.FindAsync(userId);
+            await _emailService.SendNewOrderNotificationAsync(
+                placer?.UserName ?? "Unknown",
                 createdOrder.Id,
                 drug.Name,
                 dto.Quantity
@@ -79,7 +114,6 @@ namespace PharmacyManagement.Services
             var oldStatus = existing.Status;
             _mapper.Map(dto, existing);
 
-            // If status changed to "Delivered", deduct inventory and create sale
             if (oldStatus != "Delivered" && dto.Status == "Delivered")
             {
                 await DeductInventoryAsync(existing.DrugId, existing.Quantity);
@@ -87,14 +121,12 @@ namespace PharmacyManagement.Services
                 existing.DateDispensed = DateTime.Now;
                 await CreateSaleFromOrderAsync(existing.Id);
 
-                // Notify doctor order is delivered
-                var doctor = await _context.Users.FindAsync(existing.DoctorId);
-                if (doctor != null)
+                var placer = await _context.Users.FindAsync(existing.PlacedById);
+                if (placer != null)
                     await _emailService.SendOrderStatusEmailAsync(
-                        doctor.Email!, doctor.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Delivered"
+                        placer.Email!, placer.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Delivered"
                     );
             }
-            // If status changed from "Delivered" to something else, restore inventory
             else if (oldStatus == "Delivered" && dto.Status != "Delivered")
             {
                 await RestoreInventoryAsync(existing.DrugId, existing.Quantity);
@@ -103,11 +135,10 @@ namespace PharmacyManagement.Services
             }
             else if (dto.Status == "Cancelled")
             {
-                // Notify doctor order is cancelled
-                var doctor = await _context.Users.FindAsync(existing.DoctorId);
-                if (doctor != null)
+                var placer = await _context.Users.FindAsync(existing.PlacedById);
+                if (placer != null)
                     await _emailService.SendOrderStatusEmailAsync(
-                        doctor.Email!, doctor.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Cancelled"
+                        placer.Email!, placer.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Cancelled"
                     );
             }
 
@@ -120,7 +151,6 @@ namespace PharmacyManagement.Services
             var order = await _orderRepository.GetOrderByIdAsync(id)
                        ?? throw new KeyNotFoundException($"Order with ID {id} not found.");
 
-            // If order was delivered, restore inventory before deletion
             if (order.Status == "Delivered")
             {
                 await RestoreInventoryAsync(order.DrugId, order.Quantity);

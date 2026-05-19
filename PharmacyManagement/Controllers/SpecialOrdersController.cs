@@ -75,7 +75,7 @@ namespace PharmacyManagement.Controllers
             return Ok(order);
         }
 
-        [HttpPut("{id}/status")]
+        [HttpPatch("{id}/status")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateSpecialOrderStatusDto dto)
         {
