@@ -1,13 +1,9 @@
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyManagement.DTO;
 using PharmacyManagement.Interface;
-using System;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Azure.Identity;
 
 namespace PharmacyManagement.Controllers
 {
@@ -24,27 +20,51 @@ namespace PharmacyManagement.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        [HttpPost("register_doctor")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RegisterDoctor([FromBody] RegisterDoctorDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            _logger.LogInformation("Doctor registration attempt for email: {Email}", model?.Email);
+            var result = await _authService.RegisterDoctorAsync(model);
+
+            if (!result.Contains("success", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { Status = "Registration Failed", Issue = result });
+
+            return Ok(new { Status = "Success", Message = result });
+        }
+
+        [HttpPost("register_patient")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RegisterPatient([FromBody] RegisterPatientDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            _logger.LogInformation("Patient registration attempt for email: {Email}", model?.Email);
+            var result = await _authService.RegisterPatientAsync(model);
+
+            if (!result.Contains("success", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { Status = "Registration Failed", Issue = result });
+
+            return Ok(new { Status = "Success", Message = result });
+        }
+
+        // Legacy endpoint - kept for backward compatibility
         [HttpPost("register_user")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterDto model)
         {
             if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("Register endpoint called with invalid model state.");
                 return BadRequest(ModelState);
-            }
-
-            _logger.LogInformation("Attempting registration for email: {Email}", model?.Email);
 
             var result = await _authService.RegisterAsync(model);
 
             if (!result.Contains("success", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning("Registration failed for email {Email}: {Result}", model.Email, result);
                 return BadRequest(new { Status = "Registration Failed", Issue = result });
-            }
 
-            _logger.LogInformation("Registration successful for email: {Email}", model.Email);
             return Ok(new { Status = "Success", ResultInfo = result });
         }
 
@@ -53,41 +73,15 @@ namespace PharmacyManagement.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
             if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("Login endpoint called with invalid model state for email: {Email}", model?.Email);
                 return BadRequest(ModelState);
-            }
 
-            _logger.LogInformation("Attempting login for email: {Email}", model?.Email);
-
+            _logger.LogInformation("Login attempt for email: {Email}", model?.Email);
             var token = await _authService.LoginAsync(model);
+
             if (string.IsNullOrEmpty(token))
-            {
-                _logger.LogWarning("Login failed for email {Email} (Invalid credentials or inactive account).", model.Email);
-                return Unauthorized(new { Status = "Access Denied", Reason = "Authentication failed. Please check login details or account status." });
-            }
+                return Unauthorized(new { Status = "Access Denied", Reason = "Authentication failed. Account may be pending approval or credentials are incorrect." });
 
-            _logger.LogInformation("Login successful for email: {Email}", model.Email);
             return Ok(new { Token = token, Status = "Login successful." });
-        }
-
-        [HttpGet("user")]
-        [Authorize(Roles ="Admin,Doctor")]
-        public IActionResult GetUser()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            _logger.LogInformation("Fetching user info for authenticated user ID: {UserId}", userId);
-
-            if (userId == null)
-            {
-                _logger.LogError("GetUser called but user ID claim (sub) is missing from token.");
-                return Unauthorized();
-            }
-            //var userName = User.Identity?.Name;
-            var userEmail = User.FindFirstValue(ClaimTypes.Email);
-            var userRole = User.FindFirstValue(ClaimTypes.Role);
-
-            return Ok(new { Status = "Authorized Access", UserId = userId, Email = userEmail, Role = userRole });
         }
 
         [HttpPost("login_admin")]
@@ -95,23 +89,51 @@ namespace PharmacyManagement.Controllers
         public async Task<IActionResult> AdminLogin([FromBody] LoginDto model)
         {
             if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("Admin login called with invalid model state for email: {Email}", model?.Email);
                 return BadRequest(ModelState);
-            }
-
-            _logger.LogInformation("Attempting admin login for email: {Email}", model?.Email);
 
             var token = await _authService.LoginAdminAsync(model);
-            if (string.IsNullOrEmpty(token))
-            {
-                _logger.LogWarning("Admin login failed for email {Email}", model.Email);
-                return Unauthorized(new { Status = "Access Denied", Reason = "Authentication failed or not an admin." });
-            }
 
-            _logger.LogInformation("Admin login successful for email: {Email}", model.Email);
+            if (string.IsNullOrEmpty(token))
+                return Unauthorized(new { Status = "Access Denied", Reason = "Authentication failed or not an admin." });
+
             return Ok(new { Token = token, Status = "Admin login successful." });
         }
 
+        [HttpGet("user")]
+        [Authorize(Roles = "Admin,Doctor,Patient")]
+        public IActionResult GetUser()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized();
+
+            var userEmail = User.FindFirstValue(ClaimTypes.Email);
+            var userRole = User.FindFirstValue(ClaimTypes.Role);
+
+            return Ok(new { Status = "Authorized Access", UserId = userId, Email = userEmail, Role = userRole });
+        }
+
+        [HttpGet("pending-doctors")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPendingDoctors()
+        {
+            var pendingDoctors = await _authService.GetPendingDoctorsAsync();
+            return Ok(pendingDoctors);
+        }
+
+        [HttpPut("approve-doctor")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ApproveDoctor([FromBody] ApproveDoctorDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _authService.ApproveDoctorAsync(dto);
+
+            if (result.Contains("not found") || result.Contains("not a doctor"))
+                return BadRequest(new { Status = "Failed", Message = result });
+
+            return Ok(new { Status = "Success", Message = result });
+        }
     }
 }
