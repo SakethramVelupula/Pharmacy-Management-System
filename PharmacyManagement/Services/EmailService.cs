@@ -169,6 +169,118 @@ namespace PharmacyManagement.Services
             }
         }
 
+        public async Task SendDoctorPendingApprovalAsync(string email, string name)
+        {
+            var subject = "Your Doctor Account is Pending Approval";
+            var body = $@"
+                <html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                    <div style='background-color: #667eea; padding: 20px; text-align: center;'>
+                        <h1 style='color: white; margin: 0;'>Pharmacy Management System</h1>
+                    </div>
+                    <div style='padding: 30px; background-color: #f9f9f9;'>
+                        <h2>Registration Received, Dr. {name}!</h2>
+                        <p>Your doctor account registration has been received and is currently <strong>pending admin approval</strong>.</p>
+                        <p>You will receive an email once your account has been reviewed.</p>
+                        <div style='background-color: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107;'>
+                            <p style='margin: 0;'>⏳ <strong>Status: Pending Approval</strong></p>
+                        </div>
+                    </div>
+                    <div style='background-color: #333; padding: 15px; text-align: center;'>
+                        <p style='color: #aaa; margin: 0; font-size: 12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+            await SendEmailAsync(email, subject, body);
+        }
+
+        public async Task SendAdminNewDoctorRegistrationAsync(string doctorName, string doctorEmail, string clinicName, string licenseNumber)
+        {
+            var adminEmail = _configuration["Email:SenderEmail"];
+            var subject = $"New Doctor Registration Pending Approval - Dr. {doctorName}";
+            var body = $@"
+                <html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                    <div style='background-color: #667eea; padding: 20px; text-align: center;'>
+                        <h1 style='color: white; margin: 0;'>Pharmacy Management System</h1>
+                    </div>
+                    <div style='padding: 30px; background-color: #f9f9f9;'>
+                        <h2>New Doctor Registration</h2>
+                        <p>A new doctor has registered and requires your approval:</p>
+                        <table style='width: 100%; border-collapse: collapse;'>
+                            <tr style='background-color: #667eea; color: white;'>
+                                <th style='padding: 10px; text-align: left;'>Field</th>
+                                <th style='padding: 10px; text-align: left;'>Details</th>
+                            </tr>
+                            <tr style='background-color: white;'>
+                                <td style='padding: 10px; border: 1px solid #ddd;'>Name</td>
+                                <td style='padding: 10px; border: 1px solid #ddd;'>Dr. {doctorName}</td>
+                            </tr>
+                            <tr style='background-color: #f2f2f2;'>
+                                <td style='padding: 10px; border: 1px solid #ddd;'>Email</td>
+                                <td style='padding: 10px; border: 1px solid #ddd;'>{doctorEmail}</td>
+                            </tr>
+                            <tr style='background-color: white;'>
+                                <td style='padding: 10px; border: 1px solid #ddd;'>Clinic</td>
+                                <td style='padding: 10px; border: 1px solid #ddd;'>{clinicName}</td>
+                            </tr>
+                            <tr style='background-color: #f2f2f2;'>
+                                <td style='padding: 10px; border: 1px solid #ddd;'>License Number</td>
+                                <td style='padding: 10px; border: 1px solid #ddd;'>{licenseNumber}</td>
+                            </tr>
+                        </table>
+                        <p style='margin-top: 20px;'>Please login to the admin panel to approve or reject this registration.</p>
+                    </div>
+                    <div style='background-color: #333; padding: 15px; text-align: center;'>
+                        <p style='color: #aaa; margin: 0; font-size: 12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+            await SendEmailAsync(adminEmail!, subject, body);
+        }
+
+        public async Task SendDoctorApprovedAsync(string email, string name)
+        {
+            var subject = "Your Doctor Account Has Been Approved!";
+            var body = $@"
+                <html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                    <div style='background-color: #667eea; padding: 20px; text-align: center;'>
+                        <h1 style='color: white; margin: 0;'>Pharmacy Management System</h1>
+                    </div>
+                    <div style='padding: 30px; background-color: #f9f9f9;'>
+                        <h2>Account Approved, Dr. {name}!</h2>
+                        <div style='background-color: #d4edda; padding: 15px; border-radius: 6px; border-left: 4px solid #28a745;'>
+                            <p style='margin: 0;'>✅ <strong>Your account has been approved!</strong></p>
+                        </div>
+                        <p style='margin-top: 20px;'>You can now login and start placing orders.</p>
+                        <p>Login at: <a href='http://localhost:4200/login'>Pharmacy Management System</a></p>
+                    </div>
+                    <div style='background-color: #333; padding: 15px; text-align: center;'>
+                        <p style='color: #aaa; margin: 0; font-size: 12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+            await SendEmailAsync(email, subject, body);
+        }
+
+        public async Task SendDoctorRejectedAsync(string email, string name, string reason)
+        {
+            var subject = "Your Doctor Account Registration Was Not Approved";
+            var body = $@"
+                <html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                    <div style='background-color: #667eea; padding: 20px; text-align: center;'>
+                        <h1 style='color: white; margin: 0;'>Pharmacy Management System</h1>
+                    </div>
+                    <div style='padding: 30px; background-color: #f9f9f9;'>
+                        <h2>Registration Not Approved, Dr. {name}</h2>
+                        <div style='background-color: #f8d7da; padding: 15px; border-radius: 6px; border-left: 4px solid #dc3545;'>
+                            <p style='margin: 0;'>❌ <strong>Your registration was not approved.</strong></p>
+                        </div>
+                        <p style='margin-top: 20px;'><strong>Reason:</strong> {reason}</p>
+                        <p>If you believe this is a mistake, please contact the pharmacy directly.</p>
+                    </div>
+                    <div style='background-color: #333; padding: 15px; text-align: center;'>
+                        <p style='color: #aaa; margin: 0; font-size: 12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+            await SendEmailAsync(email, subject, body);
+        }
+
         private static string GetStatusColor(string status) => status switch
         {
             "Delivered" => "#28a745",

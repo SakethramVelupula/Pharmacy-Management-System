@@ -84,9 +84,11 @@ namespace PharmacyManagement.Repository
             }
 
             if (!user.IsActive)
-            {
                 return null;
-            }
+
+            // Doctors must be approved by admin before logging in
+            if (user.Role == "Doctor" && !user.IsApproved)
+                return null;
 
             user.LastLoginDate = DateTime.UtcNow;
             _context.Entry(user).Property(u => u.LastLoginDate).IsModified = true;
@@ -131,6 +133,25 @@ namespace PharmacyManagement.Repository
         public async Task<User?> GetUserByEmailAsync(string email)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<User?> GetUserByIdAsync(string userId)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        }
+
+        public async Task<IEnumerable<User>> GetPendingDoctorsAsync()
+        {
+            return await _context.Users
+                .Where(u => u.Role == "Doctor" && !u.IsApproved)
+                .ToListAsync();
+        }
+
+        public async Task<bool> UpdateUserAsync(User user)
+        {
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
     }
