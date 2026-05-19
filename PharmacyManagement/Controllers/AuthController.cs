@@ -52,23 +52,8 @@ namespace PharmacyManagement.Controllers
             return Ok(new { Status = "Success", Message = result });
         }
 
-        // Legacy endpoint - kept for backward compatibility
-        [HttpPost("register_user")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Register([FromBody] RegisterDto model)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var result = await _authService.RegisterAsync(model);
-
-            if (!result.Contains("success", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new { Status = "Registration Failed", Issue = result });
-
-            return Ok(new { Status = "Success", ResultInfo = result });
-        }
-
-        [HttpPost("login_user")]
+        // Legacy endpoint removed - use register_doctor or register_patient instead
+[HttpPost("login_user")]
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {

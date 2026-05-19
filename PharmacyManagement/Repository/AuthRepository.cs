@@ -102,19 +102,21 @@ namespace PharmacyManagement.Repository
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            var claims = new List<Claim> 
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var roles = await _userManager.GetRolesAsync(user);
             foreach (var role in roles)
-            {
                 claims.Add(new Claim(ClaimTypes.Role, role));
-            }
+
+            // Fallback: if Identity roles are empty, use the custom Role property
+            if (!roles.Any() && !string.IsNullOrEmpty(user.Role))
+                claims.Add(new Claim(ClaimTypes.Role, user.Role));
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
