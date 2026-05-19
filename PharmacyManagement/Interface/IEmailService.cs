@@ -5,5 +5,9 @@ namespace PharmacyManagement.Interface
         Task SendOrderStatusEmailAsync(string doctorEmail, string doctorName, int orderId, string drugName, string status);
         Task SendWelcomeEmailAsync(string email, string name);
         Task SendNewOrderNotificationAsync(string doctorName, int orderId, string drugName, int quantity);
+        Task SendDoctorPendingApprovalAsync(string email, string name);
+        Task SendAdminNewDoctorRegistrationAsync(string doctorName, string doctorEmail, string clinicName, string licenseNumber);
+        Task SendDoctorApprovedAsync(string email, string name);
+        Task SendDoctorRejectedAsync(string email, string name, string reason);
     }
 }
