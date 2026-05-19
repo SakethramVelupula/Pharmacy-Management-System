@@ -33,7 +33,7 @@ namespace PharmacyManagement.Controllers
             return Ok(supplier);
         }
 
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateSupplier(int id, [FromBody] UpdateSupplierDto dto)
         {

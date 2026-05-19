@@ -6,7 +6,7 @@ namespace PharmacyManagement.Models
     public class Order
     {
         public int Id { get; set; }
-        public string DoctorId { get; set; }
+        public string PlacedById { get; set; }
         public int DrugId { get; set; }
         public int Quantity { get; set; }
         public string Status { get; set; } = "Pending";

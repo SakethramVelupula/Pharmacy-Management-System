@@ -30,11 +30,11 @@ namespace PharmacyManagement.Repository
             return await _context.Orders.Include(o => o.Drug).AsNoTracking().FirstOrDefaultAsync(o => o.Id == id);
         }
 
-        public async Task<IEnumerable<Order>> GetOrdersByDoctorIdAsync(string doctorId)
+        public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId)
         {
-            _logger.LogInformation("Fetching orders for Doctor ID {DoctorId}", doctorId);
+            _logger.LogInformation("Fetching orders for User ID {UserId}", userId);
             return await _context.Orders
-                .Where(o => o.DoctorId == doctorId)
+                .Where(o => o.PlacedById == userId)
                 .Include(o => o.Drug)
                 .AsNoTracking()
                 .ToListAsync();

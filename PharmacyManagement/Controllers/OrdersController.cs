@@ -19,18 +19,18 @@ namespace PharmacyManagement.Controllers
         }
 
         [HttpGet("view")]
-        [Authorize(Roles = "Admin,Doctor")]
+        [Authorize(Roles = "Admin,Doctor,Patient")]
         public async Task<ActionResult<IEnumerable<OrderDto>>> GetOrders()
         {
             var role = User.FindFirstValue(ClaimTypes.Role);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (role == "Doctor")
+            if (role == "Doctor" || role == "Patient")
             {
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized("User ID not found in token");
-                    
-                var orders = await _orderService.GetOrdersByDoctorIdAsync(userId);
+
+                var orders = await _orderService.GetOrdersByUserIdAsync(userId);
                 return Ok(orders);
             }
 
@@ -39,7 +39,7 @@ namespace PharmacyManagement.Controllers
         }
 
         [HttpGet("view/{id}")]
-        [Authorize(Roles = "Admin,Doctor")]
+        [Authorize(Roles = "Admin,Doctor,Patient")]
         public async Task<ActionResult<OrderDto>> GetOrder(int id)
         {
             var order = await _orderService.GetOrderByIdAsync(id);
@@ -48,18 +48,16 @@ namespace PharmacyManagement.Controllers
             var role = User.FindFirstValue(ClaimTypes.Role);
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Doctors can only access their own orders
-            if (role == "Doctor" && order.DoctorId != userId)
-                return Forbid("You can only access your own orders");
+            if ((role == "Doctor" || role == "Patient") && order.PlacedById != userId)
+                return Forbid();
 
             return Ok(order);
         }
 
-
-
-        [HttpPost]
+        // Doctor places an order (prescription optional)
+        [HttpPost("doctor")]
         [Authorize(Roles = "Doctor")]
-        public async Task<ActionResult<OrderDto>> CreateOrder([FromBody] CreateOrderDto dto)
+        public async Task<ActionResult<OrderDto>> CreateDoctorOrder([FromBody] CreateOrderDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
@@ -69,7 +67,20 @@ namespace PharmacyManagement.Controllers
             return CreatedAtAction(nameof(GetOrder), new { id = created.Id }, created);
         }
 
-        [HttpPut("update/{id}")]
+        // Patient places an order (prescription required)
+        [HttpPost("patient")]
+        [Authorize(Roles = "Patient")]
+        public async Task<ActionResult<OrderDto>> CreatePatientOrder([FromBody] CreatePatientOrderDto dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User ID not found in token");
+
+            var created = await _orderService.CreatePatientOrderAsync(dto, userId);
+            return CreatedAtAction(nameof(GetOrder), new { id = created.Id }, created);
+        }
+
+        [HttpPatch("update/{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<OrderDto>> UpdateOrder(int id, [FromBody] UpdateOrderDto dto)
         {
@@ -77,21 +88,20 @@ namespace PharmacyManagement.Controllers
             return Ok(updated);
         }
 
-        [HttpPut("status/{id}")]
+        [HttpPatch("status/{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<OrderDto>> UpdateOrderStatus(int id, [FromBody] string status)
         {
-            // Validate status
             var validStatuses = new[] { "Pending", "Processing", "Delivered", "Cancelled" };
             if (!validStatuses.Contains(status))
                 return BadRequest($"Invalid status. Valid statuses are: {string.Join(", ", validStatuses)}");
 
             var order = await _orderService.GetOrderByIdAsync(id);
             if (order == null) return NotFound();
-            
-            var updateDto = new UpdateOrderDto 
-            { 
-                Status = status, 
+
+            var updateDto = new UpdateOrderDto
+            {
+                Status = status,
                 Quantity = order.Quantity,
                 PrescriptionReference = order.PrescriptionReference,
                 DateDispensed = order.DateDispensed

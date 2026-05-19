@@ -18,25 +18,6 @@ namespace PharmacyManagement.Services
             _emailService = emailService;
             _mapper = mapper;
         }
-
-        // Legacy method - kept for backward compatibility
-        public async Task<string> RegisterAsync(RegisterDto model)
-        {
-            var user = _mapper.Map<User>(model);
-            user.UserName = model.Name;
-            user.Role = "Doctor";
-            user.IsApproved = false;
-            var (isSuccess, message) = await _authRepository.RegisterAsync(user, model.Password);
-
-            if (isSuccess)
-            {
-                await _emailService.SendDoctorPendingApprovalAsync(model.Email, model.Name);
-                await _emailService.SendAdminNewDoctorRegistrationAsync(model.Name, model.Email, "N/A", "N/A");
-            }
-
-            return isSuccess ? "Registration successful. Pending admin approval." : $"Registration failed: {message}";
-        }
-
         public async Task<string> RegisterDoctorAsync(RegisterDoctorDto model)
         {
             var user = new User

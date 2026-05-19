@@ -41,7 +41,7 @@ namespace PharmacyManagement.Controllers
             var added = await _service.AddDrugAsync(createDrugdto);
             return CreatedAtAction(nameof(GetDrugById), new { id = added.DrugId }, added);
         }
-        [HttpPut("{id}")]
+        [HttpPatch("{id}")]
         [Authorize(Roles ="Admin")]
         public async Task<IActionResult> UpdateDrug(int id, [FromBody] UpdateDrugDto updateDrugDto)
         {

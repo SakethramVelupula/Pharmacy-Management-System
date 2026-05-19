@@ -5,7 +5,6 @@ namespace PharmacyManagement.Interface
 {
     public interface IAuthService
     {
-        Task<string> RegisterAsync(RegisterDto model);
         Task<string> RegisterDoctorAsync(RegisterDoctorDto model);
         Task<string> RegisterPatientAsync(RegisterPatientDto model);
         Task<string?> LoginAsync(LoginDto model);
