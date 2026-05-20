@@ -81,7 +81,7 @@ namespace PharmacyManagement.Repository
 
         }
 
-        public async Task<bool> AddDrugToInventoryAsync(string drugName, int supplierId, int quantity)
+        public async Task<bool> AddDrugToInventoryAsync(string drugName, int supplierId, int quantity, DateTime? expiryDate)
 
         {
 
@@ -120,39 +120,25 @@ namespace PharmacyManagement.Repository
             DateTime now = DateTime.UtcNow;
 
             if (existingInventory != null)
-
             {
-
                 _logger.LogInformation("Updating existing inventory for Drug ID: {DrugId}", drug.DrugId);
-
                 existingInventory.Quantity += quantity;
-
                 existingInventory.LastRestockDate = now;
-
+                if (expiryDate.HasValue)
+                    existingInventory.ExpiryDate = expiryDate;
                 _context.Inventory.Update(existingInventory);
-
             }
-
             else
-
             {
-
                 _logger.LogInformation("Creating new inventory record for Drug ID: {DrugId}", drug.DrugId);
-
                 await _context.Inventory.AddAsync(new Inventory
-
                 {
-
                     DrugId = drug.DrugId,
-
                     SupplierId = supplierId,
-
                     Quantity = quantity,
-
-                    LastRestockDate = now
-
+                    LastRestockDate = now,
+                    ExpiryDate = expiryDate
                 });
-
             }
 
             await _context.SaveChangesAsync();
@@ -188,5 +174,30 @@ namespace PharmacyManagement.Repository
         }
 
 
+        public async Task<IEnumerable<Inventory>> GetExpiringBatchesAsync(int warningDays)
+        {
+            var thresholdDate = DateTime.UtcNow.AddDays(warningDays);
+            return await _context.Inventory
+                .Include(i => i.Drug)
+                .Include(i => i.Supplier)
+                .Where(i => i.ExpiryDate.HasValue
+                    && i.ExpiryDate.Value.Date > DateTime.UtcNow.Date
+                    && i.ExpiryDate.Value.Date <= thresholdDate.Date
+                    && i.Quantity > 0)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Inventory>> GetExpiredBatchesAsync()
+        {
+            return await _context.Inventory
+                .Include(i => i.Drug)
+                .Include(i => i.Supplier)
+                .Where(i => i.ExpiryDate.HasValue
+                    && i.ExpiryDate.Value.Date <= DateTime.UtcNow.Date
+                    && i.Quantity > 0)
+                .AsNoTracking()
+                .ToListAsync();
+        }
     }
 }

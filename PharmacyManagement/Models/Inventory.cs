@@ -23,6 +23,7 @@ namespace PharmacyManagement.Models
         public int Quantity { get; set; }
 
         public DateTime? LastRestockDate { get; set; }
-        
+
+        public DateTime? ExpiryDate { get; set; }
     }
 }

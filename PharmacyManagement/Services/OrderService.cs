@@ -55,6 +55,15 @@ namespace PharmacyManagement.Services
             if (drug.Stock < dto.Quantity)
                 throw new InvalidOperationException("Insufficient stock available.");
 
+            // Block order if all available batches are expired
+            var hasValidBatch = await _context.Inventory
+                .AnyAsync(i => i.DrugId == dto.DrugId
+                    && i.Quantity > 0
+                    && (!i.ExpiryDate.HasValue || i.ExpiryDate.Value.Date > DateTime.UtcNow.Date));
+
+            if (!hasValidBatch)
+                throw new InvalidOperationException("Cannot place order: all available batches for this drug are expired.");
+
             var order = _mapper.Map<Order>(dto);
             order.PlacedById = userId;
             var createdOrder = await _orderRepository.CreateOrderAsync(order);
@@ -82,6 +91,15 @@ namespace PharmacyManagement.Services
 
             if (drug.Stock < dto.Quantity)
                 throw new InvalidOperationException("Insufficient stock available.");
+
+            // Block order if all available batches are expired
+            var hasValidBatch = await _context.Inventory
+                .AnyAsync(i => i.DrugId == dto.DrugId
+                    && i.Quantity > 0
+                    && (!i.ExpiryDate.HasValue || i.ExpiryDate.Value.Date > DateTime.UtcNow.Date));
+
+            if (!hasValidBatch)
+                throw new InvalidOperationException("Cannot place order: all available batches for this drug are expired.");
 
             var order = new Order
             {
