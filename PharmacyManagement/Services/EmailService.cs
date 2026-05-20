@@ -288,5 +288,50 @@ namespace PharmacyManagement.Services
             "Cancelled" => "#dc3545",
             _ => "#667eea"
         };
+
+        public async Task SendExpiryAlertAsync(IEnumerable<(string DrugName, int Quantity, DateTime ExpiryDate, int DaysUntilExpiry, bool IsExpired)> batches)
+        {
+            var adminEmail = _configuration["Email:SenderEmail"];
+            var subject = "⚠️ Drug Expiry Alert - Action Required";
+
+            var rows = string.Join("", batches.Select(b =>
+            {
+                var color = b.IsExpired ? "#f8d7da" : "#fff3cd";
+                var badge = b.IsExpired
+                    ? "<span style='background:#dc3545;color:white;padding:3px 8px;border-radius:10px;'>EXPIRED</span>"
+                    : $"<span style='background:#ffc107;color:black;padding:3px 8px;border-radius:10px;'>Expires in {b.DaysUntilExpiry} days</span>";
+                return $@"<tr style='background-color:{color};'>
+                    <td style='padding:10px;border:1px solid #ddd;'>{b.DrugName}</td>
+                    <td style='padding:10px;border:1px solid #ddd;'>{b.Quantity}</td>
+                    <td style='padding:10px;border:1px solid #ddd;'>{b.ExpiryDate:yyyy-MM-dd}</td>
+                    <td style='padding:10px;border:1px solid #ddd;'>{badge}</td>
+                </tr>";
+            }));
+
+            var body = $@"
+                <html><body style='font-family:Arial,sans-serif;max-width:700px;margin:0 auto;'>
+                    <div style='background-color:#dc3545;padding:20px;text-align:center;'>
+                        <h1 style='color:white;margin:0;'>⚠️ Drug Expiry Alert</h1>
+                    </div>
+                    <div style='padding:30px;background-color:#f9f9f9;'>
+                        <p>The following inventory batches require immediate attention:</p>
+                        <table style='width:100%;border-collapse:collapse;'>
+                            <tr style='background-color:#343a40;color:white;'>
+                                <th style='padding:10px;text-align:left;'>Drug</th>
+                                <th style='padding:10px;text-align:left;'>Quantity</th>
+                                <th style='padding:10px;text-align:left;'>Expiry Date</th>
+                                <th style='padding:10px;text-align:left;'>Status</th>
+                            </tr>
+                            {rows}
+                        </table>
+                        <p style='margin-top:20px;'>Please remove expired batches and restock as needed.</p>
+                    </div>
+                    <div style='background-color:#333;padding:15px;text-align:center;'>
+                        <p style='color:#aaa;margin:0;font-size:12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+
+            await SendEmailAsync(adminEmail!, subject, body);
+        }
     }
 }
