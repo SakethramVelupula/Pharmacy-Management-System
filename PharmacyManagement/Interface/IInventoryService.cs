@@ -11,6 +11,7 @@ namespace PharmacyManagement.Interface
         Task<ReadInventoryDto?> GetInventoryByDrugNameAsync(string drugName);
         Task<bool> AddDrugToInventoryAsync(AddInventoryDto dto);
         Task<bool> UpdateDrugQuantityAsync(string drugName, UpdateInventoryQuantityDto dto);
-
+        Task<IEnumerable<ExpiringBatchDto>> GetExpiringBatchesAsync(int? warningDays = null);
+        Task<IEnumerable<ExpiringBatchDto>> GetExpiredBatchesAsync();
     }
 }

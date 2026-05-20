@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PharmacyManagement.DTO;
 using PharmacyManagement.Interface;
@@ -13,13 +14,15 @@ namespace PharmacyManagement.Services
         private readonly IDrugsService _drugService;
         private readonly IMapper _mapper;
         private readonly ILogger<InventoryService> _logger;
+        private readonly int _expiryWarningDays;
 
-        public InventoryService(IInventoryRepository repo,IDrugsService drugService, IMapper mapper, ILogger<InventoryService> logger)
+        public InventoryService(IInventoryRepository repo, IDrugsService drugService, IMapper mapper, ILogger<InventoryService> logger, IConfiguration configuration)
         {
             _repo = repo;
-             _drugService=drugService;
+            _drugService = drugService;
             _mapper = mapper;
             _logger = logger;
+            _expiryWarningDays = configuration.GetValue<int>("DrugExpiry:ExpiryWarningDays", 90);
         }
 
         public async Task<IEnumerable<ReadInventoryDto>> GetAllInventoryAsync()
@@ -43,12 +46,10 @@ namespace PharmacyManagement.Services
         public async Task<bool> AddDrugToInventoryAsync(AddInventoryDto dto)
         {
             _logger.LogInformation("Service: Adding inventory for drug {DrugName}", dto.DrugName);
-            var result = await _repo.AddDrugToInventoryAsync(dto.DrugName, dto.SupplierId, dto.Quantity);
+            var result = await _repo.AddDrugToInventoryAsync(dto.DrugName, dto.SupplierId, dto.Quantity, dto.ExpiryDate);
             var drug = await _drugService.GetByNameAsync(dto.DrugName);
             if (drug != null)
-            {
                 await _drugService.UpdateDrugStockAsync(drug.DrugId);
-            }
             return result;
         }
 
@@ -58,11 +59,32 @@ namespace PharmacyManagement.Services
             var result = await _repo.UpdateDrugQuantityAsync(drugName, dto.NewQuantity);
             var drug = await _drugService.GetByNameAsync(drugName);
             if (drug != null)
-            {
                 await _drugService.UpdateDrugStockAsync(drug.DrugId);
-            }
             return result;
         }
 
+        public async Task<IEnumerable<ExpiringBatchDto>> GetExpiringBatchesAsync(int? warningDays = null)
+        {
+            var days = warningDays ?? _expiryWarningDays;
+            var batches = await _repo.GetExpiringBatchesAsync(days);
+            return batches.Select(ToExpiringBatchDto);
+        }
+
+        public async Task<IEnumerable<ExpiringBatchDto>> GetExpiredBatchesAsync()
+        {
+            var batches = await _repo.GetExpiredBatchesAsync();
+            return batches.Select(ToExpiringBatchDto);
+        }
+
+        private static ExpiringBatchDto ToExpiringBatchDto(PharmacyManagement.Models.Inventory i) => new()
+        {
+            InventoryId = i.Id,
+            DrugId = i.DrugId,
+            DrugName = i.Drug?.Name ?? "Unknown",
+            Quantity = i.Quantity,
+            ExpiryDate = i.ExpiryDate!.Value,
+            DaysUntilExpiry = (i.ExpiryDate.Value.Date - DateTime.UtcNow.Date).Days,
+            IsExpired = i.ExpiryDate.Value.Date <= DateTime.UtcNow.Date
+        };
     }
 }

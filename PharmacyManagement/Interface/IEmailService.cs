@@ -9,5 +9,6 @@ namespace PharmacyManagement.Interface
         Task SendAdminNewDoctorRegistrationAsync(string doctorName, string doctorEmail, string clinicName, string licenseNumber);
         Task SendDoctorApprovedAsync(string email, string name);
         Task SendDoctorRejectedAsync(string email, string name, string reason);
+        Task SendExpiryAlertAsync(IEnumerable<(string DrugName, int Quantity, DateTime ExpiryDate, int DaysUntilExpiry, bool IsExpired)> batches);
     }
 }

@@ -40,6 +40,7 @@ builder.Services.AddScoped<ISpecialOrderService, SpecialOrderService>();
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHostedService<ExpiryCheckerService>();
 
 
 builder.Services.AddAuthentication(options =>

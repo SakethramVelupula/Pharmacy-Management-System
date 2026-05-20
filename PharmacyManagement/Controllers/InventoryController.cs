@@ -75,7 +75,21 @@ namespace PharmacyManagement.Controllers
             await _service.UpdateDrugQuantityAsync(drugName, dto);
             return Ok(new { Message = $"Inventory quantity updated for {drugName}." });
         }
-        
 
+        [HttpGet("expiring")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<ExpiringBatchDto>>> GetExpiringBatches([FromQuery] int? days = null)
+        {
+            var batches = await _service.GetExpiringBatchesAsync(days);
+            return Ok(batches);
+        }
+
+        [HttpGet("expired")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<ExpiringBatchDto>>> GetExpiredBatches()
+        {
+            var batches = await _service.GetExpiredBatchesAsync();
+            return Ok(batches);
+        }
     }
 }
