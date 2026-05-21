@@ -10,5 +10,6 @@ namespace PharmacyManagement.Interface
         Task SendDoctorApprovedAsync(string email, string name);
         Task SendDoctorRejectedAsync(string email, string name, string reason);
         Task SendExpiryAlertAsync(IEnumerable<(string DrugName, int Quantity, DateTime ExpiryDate, int DaysUntilExpiry, bool IsExpired)> batches);
+        Task SendLowStockAlertAsync(IEnumerable<(string DrugName, int CurrentStock, int Threshold)> drugs);
     }
 }

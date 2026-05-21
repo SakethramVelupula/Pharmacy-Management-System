@@ -19,5 +19,6 @@ namespace PharmacyManagement.Models
         [MaxLength(250)]
         public string? StorageInstructions { get; set; }
         public bool IsPrescriptionRequired { get; set; } = false;
+        public int LowStockThreshold { get; set; } = 10;
     }
 }

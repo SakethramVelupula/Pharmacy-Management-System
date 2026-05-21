@@ -57,5 +57,11 @@ namespace PharmacyManagement.Services
         {
             return await _repo.GetByNameAsync(name);
         }
+
+        public async Task<IEnumerable<DrugDto>> GetLowStockDrugsAsync()
+        {
+            var drugs = await _repo.GetLowStockDrugsAsync();
+            return _mapper.Map<IEnumerable<DrugDto>>(drugs);
+        }
     }
 }

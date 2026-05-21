@@ -333,5 +333,45 @@ namespace PharmacyManagement.Services
 
             await SendEmailAsync(adminEmail!, subject, body);
         }
+
+        public async Task SendLowStockAlertAsync(IEnumerable<(string DrugName, int CurrentStock, int Threshold)> drugs)
+        {
+            var adminEmail = _configuration["Email:SenderEmail"];
+            var subject = "⚠️ Low Stock Alert - Action Required";
+
+            var rows = string.Join("", drugs.Select(d =>
+            {
+                var bgColor = d.CurrentStock == 0 ? "#f8d7da" : "#fff3cd";
+                var badge = d.CurrentStock == 0
+                    ? "<span style='background:#dc3545;color:white;padding:3px 8px;border-radius:10px;'>OUT OF STOCK</span>"
+                    : "<span style='background:#ffc107;color:black;padding:3px 8px;border-radius:10px;'>LOW STOCK</span>";
+                return $"<tr style='background-color:{bgColor};'><td style='padding:10px;border:1px solid #ddd;'>{d.DrugName}</td><td style='padding:10px;border:1px solid #ddd;'>{d.CurrentStock}</td><td style='padding:10px;border:1px solid #ddd;'>{d.Threshold}</td><td style='padding:10px;border:1px solid #ddd;'>{badge}</td></tr>";
+            }));
+
+            var body = $@"
+                <html><body style='font-family:Arial,sans-serif;max-width:700px;margin:0 auto;'>
+                    <div style='background-color:#fd7e14;padding:20px;text-align:center;'>
+                        <h1 style='color:white;margin:0;'>⚠️ Low Stock Alert</h1>
+                    </div>
+                    <div style='padding:30px;background-color:#f9f9f9;'>
+                        <p>The following drugs have fallen below their minimum stock threshold:</p>
+                        <table style='width:100%;border-collapse:collapse;'>
+                            <tr style='background-color:#343a40;color:white;'>
+                                <th style='padding:10px;text-align:left;'>Drug</th>
+                                <th style='padding:10px;text-align:left;'>Current Stock</th>
+                                <th style='padding:10px;text-align:left;'>Min Threshold</th>
+                                <th style='padding:10px;text-align:left;'>Status</th>
+                            </tr>
+                            {rows}
+                        </table>
+                        <p style='margin-top:20px;'>Please restock these drugs as soon as possible.</p>
+                    </div>
+                    <div style='background-color:#333;padding:15px;text-align:center;'>
+                        <p style='color:#aaa;margin:0;font-size:12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+
+            await SendEmailAsync(adminEmail!, subject, body);
+        }
     }
 }
