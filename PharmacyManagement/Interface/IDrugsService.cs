@@ -11,5 +11,6 @@ namespace PharmacyManagement.Interface
 
         Task UpdateDrugStockAsync(int drugId);
         Task<Drug?> GetByNameAsync(string name);
+        Task<IEnumerable<DrugDto>> GetLowStockDrugsAsync();
     }
 }

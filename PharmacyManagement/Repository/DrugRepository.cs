@@ -49,6 +49,13 @@ namespace PharmacyManagement.Repository
                 await _context.SaveChangesAsync();
             }
         }
-        
+
+        public async Task<IEnumerable<Drug>> GetLowStockDrugsAsync()
+        {
+            return await _context.Drugs
+                .Where(d => d.Stock <= d.LowStockThreshold)
+                .AsNoTracking()
+                .ToListAsync();
+        }
     }
 }

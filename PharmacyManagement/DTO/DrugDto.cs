@@ -11,7 +11,8 @@ namespace PharmacyManagement.DTO
         public int Stock { get; set; }
         public string? StorageInstructions { get; set; }
         public bool IsPrescriptionRequired { get; set; }
-       
+        public int LowStockThreshold { get; set; }
+        public bool IsLowStock => Stock <= LowStockThreshold;
     }
 
     public class CreateDrugDto
@@ -22,12 +23,12 @@ namespace PharmacyManagement.DTO
         public string Manufacturer { get; set; }
         [Range(0.01, 10000)]
         public decimal Price { get; set; }
-
         [MaxLength(250)]
         public string? StorageInstructions { get; set; }
         public bool IsPrescriptionRequired { get; set; } = false;
-        
-    } 
+        [Range(1, int.MaxValue)]
+        public int LowStockThreshold { get; set; } = 10;
+    }
 
     public class UpdateDrugDto
     {
@@ -38,9 +39,10 @@ namespace PharmacyManagement.DTO
         [Required]
         [Range(0.01, 10000)]
         public decimal Price { get; set; }
-
         [MaxLength(250)]
         public string? StorageInstructions { get; set; }
         public bool IsPrescriptionRequired { get; set; }
+        [Range(1, int.MaxValue)]
+        public int LowStockThreshold { get; set; } = 10;
     }
 }
