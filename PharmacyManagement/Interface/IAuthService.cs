@@ -11,5 +11,7 @@ namespace PharmacyManagement.Interface
         Task<string?> LoginAdminAsync(LoginDto model);
         Task<string> ApproveDoctorAsync(ApproveDoctorDto dto);
         Task<IEnumerable<PendingDoctorDto>> GetPendingDoctorsAsync();
+        Task<LicenseValidationResultDto> ValidateLicenseAsync(string doctorId);
+        Task<IEnumerable<ExpiringLicenseDto>> GetExpiringLicensesAsync(int? warningDays = null);
     }
 }

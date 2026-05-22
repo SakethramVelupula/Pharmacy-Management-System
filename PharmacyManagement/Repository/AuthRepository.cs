@@ -156,5 +156,15 @@ namespace PharmacyManagement.Repository
             return true;
         }
 
+        public async Task<IEnumerable<User>> GetDoctorsWithExpiringLicensesAsync(int warningDays)
+        {
+            var thresholdDate = DateTime.UtcNow.AddDays(warningDays);
+            return await _context.Users
+                .Where(u => u.Role == "Doctor"
+                    && u.IsApproved
+                    && u.LicenseExpiryDate.HasValue
+                    && u.LicenseExpiryDate.Value.Date <= thresholdDate.Date)
+                .ToListAsync();
+        }
     }
 }

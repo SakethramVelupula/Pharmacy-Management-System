@@ -11,5 +11,7 @@ namespace PharmacyManagement.Models
         public bool IsApproved { get; set; } = false;
         public string? ClinicName { get; set; }
         public string? LicenseNumber { get; set; }
+        public DateTime? LicenseExpiryDate { get; set; }
+        public string LicenseStatus { get; set; } = "Pending";
     }
 }

@@ -11,5 +11,6 @@ namespace PharmacyManagement.Interface
         Task<User?> GetUserByIdAsync(string userId);
         Task<IEnumerable<User>> GetPendingDoctorsAsync();
         Task<bool> UpdateUserAsync(User user);
+        Task<IEnumerable<User>> GetDoctorsWithExpiringLicensesAsync(int warningDays);
     }
 }

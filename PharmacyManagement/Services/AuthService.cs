@@ -2,6 +2,8 @@ using PharmacyManagement.DTO;
 using PharmacyManagement.Interface;
 using PharmacyManagement.Models;
 using AutoMapper;
+using Microsoft.Extensions.Configuration;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace PharmacyManagement.Services
@@ -11,15 +13,23 @@ namespace PharmacyManagement.Services
         private readonly IAuthRepository _authRepository;
         private readonly IEmailService _emailService;
         private readonly IMapper _mapper;
+        private readonly int _licenseWarningDays;
 
-        public AuthService(IAuthRepository authRepository, IEmailService emailService, IMapper mapper)
+        public AuthService(IAuthRepository authRepository, IEmailService emailService, IMapper mapper, IConfiguration configuration)
         {
             _authRepository = authRepository;
             _emailService = emailService;
             _mapper = mapper;
+            _licenseWarningDays = configuration.GetValue<int>("LicenseExpiry:WarningDays", 30);
         }
         public async Task<string> RegisterDoctorAsync(RegisterDoctorDto model)
         {
+            if (model.LicenseExpiryDate.Date <= DateTime.UtcNow.Date)
+                return "Registration failed: License expiry date must be in the future.";
+
+            var licenseStatus = model.LicenseExpiryDate.Date <= DateTime.UtcNow.AddDays(_licenseWarningDays).Date
+                ? "ExpiringSoon" : "Valid";
+
             var user = new User
             {
                 UserName = model.Name,
@@ -27,7 +37,9 @@ namespace PharmacyManagement.Services
                 Role = "Doctor",
                 IsApproved = false,
                 ClinicName = model.ClinicName,
-                LicenseNumber = model.LicenseNumber
+                LicenseNumber = model.LicenseNumber,
+                LicenseExpiryDate = model.LicenseExpiryDate,
+                LicenseStatus = licenseStatus
             };
 
             var (isSuccess, message) = await _authRepository.RegisterAsync(user, model.Password);
@@ -106,6 +118,54 @@ namespace PharmacyManagement.Services
                 Email = d.Email ?? "Unknown",
                 ClinicName = d.ClinicName ?? "N/A",
                 LicenseNumber = d.LicenseNumber ?? "N/A"
+            });
+        }
+
+        public async Task<LicenseValidationResultDto> ValidateLicenseAsync(string doctorId)
+        {
+            var doctor = await _authRepository.GetUserByIdAsync(doctorId);
+            if (doctor == null || doctor.Role != "Doctor")
+                return new LicenseValidationResultDto { IsValid = false, Status = "NotFound", Message = "Doctor not found." };
+
+            if (string.IsNullOrEmpty(doctor.LicenseNumber))
+                return new LicenseValidationResultDto { IsValid = false, Status = "Missing", Message = "No license number on record." };
+
+            if (!doctor.LicenseExpiryDate.HasValue)
+                return new LicenseValidationResultDto { IsValid = false, LicenseNumber = doctor.LicenseNumber, Status = "NoExpiry", Message = "No expiry date on record." };
+
+            var daysUntilExpiry = (doctor.LicenseExpiryDate.Value.Date - DateTime.UtcNow.Date).Days;
+
+            if (daysUntilExpiry < 0)
+            {
+                doctor.LicenseStatus = "Expired";
+                await _authRepository.UpdateUserAsync(doctor);
+                return new LicenseValidationResultDto { IsValid = false, LicenseNumber = doctor.LicenseNumber, Status = "Expired", Message = "License has expired.", ExpiryDate = doctor.LicenseExpiryDate, DaysUntilExpiry = daysUntilExpiry };
+            }
+
+            if (daysUntilExpiry <= _licenseWarningDays)
+            {
+                doctor.LicenseStatus = "ExpiringSoon";
+                await _authRepository.UpdateUserAsync(doctor);
+                return new LicenseValidationResultDto { IsValid = true, LicenseNumber = doctor.LicenseNumber, Status = "ExpiringSoon", Message = $"License expires in {daysUntilExpiry} days.", ExpiryDate = doctor.LicenseExpiryDate, DaysUntilExpiry = daysUntilExpiry };
+            }
+
+            doctor.LicenseStatus = "Valid";
+            await _authRepository.UpdateUserAsync(doctor);
+            return new LicenseValidationResultDto { IsValid = true, LicenseNumber = doctor.LicenseNumber, Status = "Valid", Message = "License is valid.", ExpiryDate = doctor.LicenseExpiryDate, DaysUntilExpiry = daysUntilExpiry };
+        }
+
+        public async Task<IEnumerable<ExpiringLicenseDto>> GetExpiringLicensesAsync(int? warningDays = null)
+        {
+            var days = warningDays ?? _licenseWarningDays;
+            var doctors = await _authRepository.GetDoctorsWithExpiringLicensesAsync(days);
+            return doctors.Select(d => new ExpiringLicenseDto
+            {
+                DoctorId = d.Id,
+                Name = d.UserName ?? "Unknown",
+                Email = d.Email ?? "Unknown",
+                LicenseNumber = d.LicenseNumber ?? "N/A",
+                LicenseExpiryDate = d.LicenseExpiryDate!.Value,
+                DaysUntilExpiry = (d.LicenseExpiryDate.Value.Date - DateTime.UtcNow.Date).Days
             });
         }
     }

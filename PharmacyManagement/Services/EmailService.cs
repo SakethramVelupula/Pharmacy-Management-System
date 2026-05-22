@@ -373,5 +373,46 @@ namespace PharmacyManagement.Services
 
             await SendEmailAsync(adminEmail!, subject, body);
         }
+
+        public async Task SendLicenseExpiryAlertAsync(IEnumerable<(string DoctorName, string Email, string LicenseNumber, DateTime ExpiryDate, int DaysUntilExpiry)> doctors)
+        {
+            var adminEmail = _configuration["Email:SenderEmail"];
+            var subject = "⚠️ Doctor License Expiry Alert - Action Required";
+
+            var rows = string.Join("", doctors.Select(d =>
+            {
+                var bgColor = d.DaysUntilExpiry < 0 ? "#f8d7da" : "#fff3cd";
+                var badge = d.DaysUntilExpiry < 0
+                    ? "<span style='background:#dc3545;color:white;padding:3px 8px;border-radius:10px;'>EXPIRED</span>"
+                    : $"<span style='background:#ffc107;color:black;padding:3px 8px;border-radius:10px;'>Expires in {d.DaysUntilExpiry} days</span>";
+                return $"<tr style='background-color:{bgColor};'><td style='padding:10px;border:1px solid #ddd;'>{d.DoctorName}</td><td style='padding:10px;border:1px solid #ddd;'>{d.Email}</td><td style='padding:10px;border:1px solid #ddd;'>{d.LicenseNumber}</td><td style='padding:10px;border:1px solid #ddd;'>{d.ExpiryDate:yyyy-MM-dd}</td><td style='padding:10px;border:1px solid #ddd;'>{badge}</td></tr>";
+            }));
+
+            var body = $@"
+                <html><body style='font-family:Arial,sans-serif;max-width:700px;margin:0 auto;'>
+                    <div style='background-color:#6f42c1;padding:20px;text-align:center;'>
+                        <h1 style='color:white;margin:0;'>⚠️ Doctor License Expiry Alert</h1>
+                    </div>
+                    <div style='padding:30px;background-color:#f9f9f9;'>
+                        <p>The following doctors have licenses that are expired or expiring soon:</p>
+                        <table style='width:100%;border-collapse:collapse;'>
+                            <tr style='background-color:#343a40;color:white;'>
+                                <th style='padding:10px;text-align:left;'>Doctor</th>
+                                <th style='padding:10px;text-align:left;'>Email</th>
+                                <th style='padding:10px;text-align:left;'>License No.</th>
+                                <th style='padding:10px;text-align:left;'>Expiry Date</th>
+                                <th style='padding:10px;text-align:left;'>Status</th>
+                            </tr>
+                            {rows}
+                        </table>
+                        <p style='margin-top:20px;'>Please contact these doctors to renew their licenses.</p>
+                    </div>
+                    <div style='background-color:#333;padding:15px;text-align:center;'>
+                        <p style='color:#aaa;margin:0;font-size:12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+
+            await SendEmailAsync(adminEmail!, subject, body);
+        }
     }
 }
