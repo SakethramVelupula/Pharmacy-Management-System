@@ -1,14 +1,9 @@
-﻿namespace PharmacyManagement.Tests;
+namespace PharmacyManagement.Tests;
 
 public class Tests
 {
-    [SetUp]
-    public void Setup()
-    {
-    }
-
     [Test]
-    public void Test1()
+    public void Placeholder_AlwaysPasses()
     {
         Assert.Pass();
     }
