@@ -106,7 +106,7 @@ namespace PharmacyManagement.Controllers
             return Ok(pendingDoctors);
         }
 
-        [HttpPut("approve-doctor")]
+        [HttpPatch("approve-doctor")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ApproveDoctor([FromBody] ApproveDoctorDto dto)
         {
@@ -119,6 +119,22 @@ namespace PharmacyManagement.Controllers
                 return BadRequest(new { Status = "Failed", Message = result });
 
             return Ok(new { Status = "Success", Message = result });
+        }
+
+        [HttpGet("license/{doctorId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ValidateLicense(string doctorId)
+        {
+            var result = await _authService.ValidateLicenseAsync(doctorId);
+            return Ok(result);
+        }
+
+        [HttpGet("expiring-licenses")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetExpiringLicenses([FromQuery] int? days = null)
+        {
+            var result = await _authService.GetExpiringLicensesAsync(days);
+            return Ok(result);
         }
     }
 }
