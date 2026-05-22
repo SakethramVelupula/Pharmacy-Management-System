@@ -42,6 +42,7 @@ builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHostedService<ExpiryCheckerService>();
 builder.Services.AddHostedService<LowStockCheckerService>();
+builder.Services.AddHostedService<LicenseExpiryCheckerService>();
 
 
 builder.Services.AddAuthentication(options =>
