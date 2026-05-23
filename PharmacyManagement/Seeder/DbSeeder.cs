@@ -50,10 +50,15 @@ namespace PharmacyManagement.Seeder
                 else
                     Console.WriteLine("Failed to seed admin user: " + string.Join(", ", result.Errors));
             }
-            else if (!await userManager.IsInRoleAsync(existingAdmin, "Admin"))
+            else
             {
-                await userManager.AddToRoleAsync(existingAdmin, "Admin");
-                Console.WriteLine("Admin role assigned to existing admin user.");
+                var token = await userManager.GeneratePasswordResetTokenAsync(existingAdmin);
+                await userManager.ResetPasswordAsync(existingAdmin, token, adminPassword);
+
+                if (!await userManager.IsInRoleAsync(existingAdmin, "Admin"))
+                    await userManager.AddToRoleAsync(existingAdmin, "Admin");
+
+                Console.WriteLine("Admin password synced from configuration.");
             }
         }
     }
