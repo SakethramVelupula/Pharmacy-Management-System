@@ -85,7 +85,6 @@ namespace PharmacyManagement.Services
             if (order.Status != "Dispensed")
                 throw new InvalidOperationException("Can only create sales from dispensed orders.");
 
-            // Check if sale already exists for this order
             var existingSale = await _context.Sales.FirstOrDefaultAsync(s => s.OrderId == dto.OrderId);
             if (existingSale != null)
                 throw new InvalidOperationException("Sale already exists for this order.");
@@ -102,7 +101,7 @@ namespace PharmacyManagement.Services
             };
 
             var created = await _salesRepository.CreateAsync(sale);
-            
+
             return new SaleDto
             {
                 SalesId = created.SalesId,
@@ -175,7 +174,5 @@ namespace PharmacyManagement.Services
                 PaymentMethods = paymentMethods ?? new List<PaymentMethodDto>()
             };
         }
-
-
     }
 }

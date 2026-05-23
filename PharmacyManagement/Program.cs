@@ -35,6 +35,8 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ISalesRepository, SalesRepository>();
 builder.Services.AddScoped<ISalesService, SalesService>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, StripePaymentService>();
 builder.Services.AddScoped<ISpecialOrderRepository, SpecialOrderRepository>();
 builder.Services.AddScoped<ISpecialOrderService, SpecialOrderService>();
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
