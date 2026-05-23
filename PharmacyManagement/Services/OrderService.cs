@@ -1,10 +1,12 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PharmacyManagement.DTO;
 using PharmacyManagement.Interface;
 using PharmacyManagement.Models;
 using PharmacyManagement.Data;
+using Stripe;
 
 namespace PharmacyManagement.Services
 {
@@ -14,17 +16,28 @@ namespace PharmacyManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IDrugsService _drugsService;
         private readonly IEmailService _emailService;
+        private readonly IPaymentRepository _paymentRepository;
         private readonly IMapper _mapper;
         private readonly ILogger<OrderService> _logger;
 
-        public OrderService(IOrderRepository orderRepository, ApplicationDbContext context, IDrugsService drugsService, IEmailService emailService, IMapper mapper, ILogger<OrderService> logger)
+        public OrderService(
+            IOrderRepository orderRepository,
+            ApplicationDbContext context,
+            IDrugsService drugsService,
+            IEmailService emailService,
+            IPaymentRepository paymentRepository,
+            IMapper mapper,
+            ILogger<OrderService> logger,
+            IConfiguration configuration)
         {
             _orderRepository = orderRepository;
             _context = context;
             _drugsService = drugsService;
             _emailService = emailService;
+            _paymentRepository = paymentRepository;
             _mapper = mapper;
             _logger = logger;
+            StripeConfiguration.ApiKey = configuration["Stripe:SecretKey"];
         }
 
         public async Task<IEnumerable<OrderDto>> GetAllOrdersAsync()
@@ -55,7 +68,6 @@ namespace PharmacyManagement.Services
             if (drug.Stock < dto.Quantity)
                 throw new InvalidOperationException("Insufficient stock available.");
 
-            // Block order if all available batches are expired
             var hasValidBatch = await _context.Inventory
                 .AnyAsync(i => i.DrugId == dto.DrugId
                     && i.Quantity > 0
@@ -66,7 +78,11 @@ namespace PharmacyManagement.Services
 
             var order = _mapper.Map<Order>(dto);
             order.PlacedById = userId;
+            order.PaymentMethod = dto.PaymentMethod;
             var createdOrder = await _orderRepository.CreateOrderAsync(order);
+
+            var result = _mapper.Map<OrderDto>(createdOrder);
+            result.ClientSecret = await HandlePaymentOnOrderCreation(createdOrder, drug, dto.PaymentMethod);
 
             var placer = await _context.Users.FindAsync(userId);
             await _emailService.SendNewOrderNotificationAsync(
@@ -76,7 +92,7 @@ namespace PharmacyManagement.Services
                 dto.Quantity
             );
 
-            return _mapper.Map<OrderDto>(createdOrder);
+            return result;
         }
 
         public async Task<OrderDto> CreatePatientOrderAsync(CreatePatientOrderDto dto, string userId)
@@ -92,7 +108,6 @@ namespace PharmacyManagement.Services
             if (drug.Stock < dto.Quantity)
                 throw new InvalidOperationException("Insufficient stock available.");
 
-            // Block order if all available batches are expired
             var hasValidBatch = await _context.Inventory
                 .AnyAsync(i => i.DrugId == dto.DrugId
                     && i.Quantity > 0
@@ -108,10 +123,14 @@ namespace PharmacyManagement.Services
                 PrescriptionReference = dto.PrescriptionReference,
                 PlacedById = userId,
                 Status = "Pending",
-                PlacedAt = DateTime.Now
+                PlacedAt = DateTime.Now,
+                PaymentMethod = dto.PaymentMethod
             };
 
             var createdOrder = await _orderRepository.CreateOrderAsync(order);
+
+            var result = _mapper.Map<OrderDto>(createdOrder);
+            result.ClientSecret = await HandlePaymentOnOrderCreation(createdOrder, drug, dto.PaymentMethod);
 
             var placer = await _context.Users.FindAsync(userId);
             await _emailService.SendNewOrderNotificationAsync(
@@ -121,7 +140,7 @@ namespace PharmacyManagement.Services
                 dto.Quantity
             );
 
-            return _mapper.Map<OrderDto>(createdOrder);
+            return result;
         }
 
         public async Task<OrderDto?> UpdateOrderAsync(int id, UpdateOrderDto dto)
@@ -137,13 +156,18 @@ namespace PharmacyManagement.Services
                 await DeductInventoryAsync(existing.DrugId, existing.Quantity);
                 await _drugsService.UpdateDrugStockAsync(existing.DrugId);
                 existing.DateDispensed = DateTime.Now;
-                await CreateSaleFromOrderAsync(existing.Id);
+
+                await CreateSaleFromOrderAsync(existing);
+
+                // Update cash payment transaction to Paid on delivery
+                if (existing.PaymentMethod == "Cash")
+                    await _paymentRepository.UpdateStatusAsync(
+                        $"CASH-{existing.Id}", "Paid");
 
                 var placer = await _context.Users.FindAsync(existing.PlacedById);
                 if (placer != null)
                     await _emailService.SendOrderStatusEmailAsync(
-                        placer.Email!, placer.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Delivered"
-                    );
+                        placer.Email!, placer.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Delivered");
             }
             else if (oldStatus == "Delivered" && dto.Status != "Delivered")
             {
@@ -156,8 +180,7 @@ namespace PharmacyManagement.Services
                 var placer = await _context.Users.FindAsync(existing.PlacedById);
                 if (placer != null)
                     await _emailService.SendOrderStatusEmailAsync(
-                        placer.Email!, placer.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Cancelled"
-                    );
+                        placer.Email!, placer.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Cancelled");
             }
 
             var updated = await _orderRepository.UpdateOrderAsync(existing);
@@ -175,9 +198,82 @@ namespace PharmacyManagement.Services
                 await _drugsService.UpdateDrugStockAsync(order.DrugId);
             }
 
-            var result = await _orderRepository.DeleteOrderAsync(id);
-            return result;
+            return await _orderRepository.DeleteOrderAsync(id);
         }
+
+        // Returns ClientSecret for Online payments, null for Cash
+        private async Task<string?> HandlePaymentOnOrderCreation(Order order, Drug drug, string paymentMethod)
+        {
+            if (paymentMethod == "Online")
+            {
+                var amountInCents = (long)(drug.Price * order.Quantity * 100);
+
+                var options = new PaymentIntentCreateOptions
+                {
+                    Amount = amountInCents,
+                    Currency = "usd",
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { "OrderId", order.Id.ToString() },
+                        { "DrugName", drug.Name }
+                    }
+                };
+
+                var service = new PaymentIntentService();
+                var intent = await service.CreateAsync(options);
+
+                await _paymentRepository.CreateAsync(new PaymentTransaction
+                {
+                    PaymentIntentId = intent.Id,
+                    Status = "Pending",
+                    Amount = drug.Price * order.Quantity,
+                    Currency = "usd",
+                    PaymentMethod = "Online",
+                    OrderId = order.Id
+                });
+
+                return intent.ClientSecret;
+            }
+            else
+            {
+                // Cash — store a pending transaction with a placeholder ID
+                await _paymentRepository.CreateAsync(new PaymentTransaction
+                {
+                    PaymentIntentId = $"CASH-{order.Id}",
+                    Status = "Pending",
+                    Amount = drug.Price * order.Quantity,
+                    Currency = "usd",
+                    PaymentMethod = "Cash",
+                    OrderId = order.Id
+                });
+
+                return null;
+            }
+        }
+
+        private async Task CreateSaleFromOrderAsync(Order order)
+        {
+            var existingSale = await _context.Sales.FirstOrDefaultAsync(s => s.OrderId == order.Id);
+            if (existingSale != null) return;
+
+            var drug = order.Drug ?? await _context.Drugs.FindAsync(order.DrugId);
+            if (drug == null) return;
+
+            var sale = new Sales
+            {
+                Date = order.DateDispensed ?? DateTime.UtcNow,
+                TotalAmount = drug.Price * order.Quantity,
+                Quantity = order.Quantity,
+                UnitPrice = drug.Price,
+                DrugId = order.DrugId,
+                OrderId = order.Id,
+                PaymentMethod = order.PaymentMethod
+            };
+
+            _context.Sales.Add(sale);
+            await _context.SaveChangesAsync();
+        }
+
         private async Task DeductInventoryAsync(int drugId, int quantityNeeded)
         {
             var inventories = await _context.Inventory
@@ -222,54 +318,16 @@ namespace PharmacyManagement.Services
             }
             else
             {
-                var newInventory = new Inventory
+                _context.Inventory.Add(new Inventory
                 {
                     DrugId = drugId,
                     Quantity = quantityToRestore,
                     LastRestockDate = DateTime.Now,
-                    SupplierId = 1 // Default supplier - adjust as needed
-                };
-                _context.Inventory.Add(newInventory);
+                    SupplierId = 1
+                });
             }
 
             await _context.SaveChangesAsync();
-        }
-
-        private async Task CreateSaleFromOrderAsync(int orderId)
-        {
-            try
-            {
-                var order = await _context.Orders
-                    .Include(o => o.Drug)
-                    .FirstOrDefaultAsync(o => o.Id == orderId);
-
-                if (order == null) return;
-
-                // Check if sale already exists
-                var existingSale = await _context.Sales.FirstOrDefaultAsync(s => s.OrderId == orderId);
-                if (existingSale != null) return;
-
-                var sale = new Sales
-                {
-                    Date = order.DateDispensed ?? DateTime.UtcNow,
-                    TotalAmount = order.Drug.Price * order.Quantity,
-                    Quantity = order.Quantity,
-                    UnitPrice = order.Drug.Price,
-                    DrugId = order.DrugId,
-                    OrderId = order.Id,
-                    PaymentMethod = "Cash"
-                };
-
-                _context.Sales.Add(sale);
-                await _context.SaveChangesAsync();
-                
-                _logger.LogInformation("Auto-created sale record for Order {OrderId} - Amount: {Amount}", orderId, sale.TotalAmount);
-                Console.WriteLine($"SALE CREATED: OrderId={orderId}, Amount={sale.TotalAmount}, Drug={order.Drug.Name}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to create sale record for Order {OrderId}", orderId);
-            }
         }
     }
 }

@@ -14,6 +14,9 @@ namespace PharmacyManagement.DTO
         public DateTime PlacedAt { get; set; }
         public string? PrescriptionReference { get; set; }
         public DateTime? DateDispensed { get; set; }
+        public string PaymentMethod { get; set; } = "Cash";
+        public string? PaymentStatus { get; set; }
+        public string? ClientSecret { get; set; }
     }
 
     // Used by Doctor to place an order (prescription optional)
@@ -25,6 +28,7 @@ namespace PharmacyManagement.DTO
         public int Quantity { get; set; }
         [MaxLength(100)]
         public string? PrescriptionReference { get; set; }
+        public string PaymentMethod { get; set; } = "Cash";
     }
 
     // Used by Patient to place an order (prescription required)
@@ -37,6 +41,7 @@ namespace PharmacyManagement.DTO
         [Required]
         [MaxLength(100)]
         public string PrescriptionReference { get; set; }
+        public string PaymentMethod { get; set; } = "Cash";
     }
 
     public class UpdateOrderDto
