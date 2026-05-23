@@ -18,6 +18,8 @@ namespace PharmacyManagement.Models
         [MaxLength(100)]
         public string? PrescriptionReference { get; set; }
         public DateTime? DateDispensed { get; set; }
-        
+
+        [MaxLength(50)]
+        public string PaymentMethod { get; set; } = "Cash";
     }
 }

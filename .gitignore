@@ -19,6 +19,7 @@
 appsettings.Development.json
 localsettings.json
 Properties/launchSettings.json
+**/Properties/launchSettings.json
 *.pfx
 *.key
 
