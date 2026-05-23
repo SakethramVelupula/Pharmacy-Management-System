@@ -15,5 +15,6 @@ namespace PharmacyManagement.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<SpecialOrder> SpecialOrders { get; set; }
+        public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
     }
 }
