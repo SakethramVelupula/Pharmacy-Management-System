@@ -14,7 +14,9 @@
         "Email__Password": "jtyb dmlx xakx ruhq",
         "Admin__Email": "sakethram@gmail.com",
         "Admin__Password": "Sakethram@03",
-        "Admin__Username": "SakethRam31"
+        "Admin__Username": "SakethRam31",
+        "Stripe__SecretKey": "sk_test_your_secret_key_here",
+        "Stripe__PublishableKey": "pk_test_your_publishable_key_here"
       }
     },
     "https": {
@@ -30,7 +32,9 @@
         "Email__Password": "jtyb dmlx xakx ruhq",
         "Admin__Email": "sakethram@gmail.com",
         "Admin__Password": "Sakethram@03",
-        "Admin__Username": "SakethRam31"
+        "Admin__Username": "SakethRam31",
+        "Stripe__SecretKey": "sk_test_your_secret_key_here",
+        "Stripe__PublishableKey": "pk_test_your_publishable_key_here"
       }
     }
   }
