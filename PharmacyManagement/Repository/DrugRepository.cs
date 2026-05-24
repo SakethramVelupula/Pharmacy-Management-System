@@ -43,7 +43,7 @@ namespace PharmacyManagement.Repository
             if (drug != null)
             {
                 var totalQuantity = await _context.Inventory
-                    .Where(i => i.Drug.Name.ToLower() == drug.Name.ToLower())
+                    .Where(i => i.DrugId == drugId)
                     .SumAsync(i => i.Quantity);
                 drug.Stock = totalQuantity;
                 await _context.SaveChangesAsync();

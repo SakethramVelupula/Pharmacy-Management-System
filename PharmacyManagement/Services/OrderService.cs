@@ -105,7 +105,7 @@ namespace PharmacyManagement.Services
             var drug = await _context.Drugs.FindAsync(dto.DrugId)
                        ?? throw new KeyNotFoundException("Drug not found.");
 
-            if (!drug.IsPrescriptionRequired == false && string.IsNullOrWhiteSpace(dto.PrescriptionReference))
+            if (drug.IsPrescriptionRequired && string.IsNullOrWhiteSpace(dto.PrescriptionReference))
                 throw new InvalidOperationException("Prescription reference is required for this drug.");
 
             if (drug.Stock < dto.Quantity)

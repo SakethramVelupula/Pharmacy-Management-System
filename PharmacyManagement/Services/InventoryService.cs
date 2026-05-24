@@ -56,7 +56,7 @@ namespace PharmacyManagement.Services
         public async Task<bool> UpdateDrugQuantityAsync(string drugName, UpdateInventoryQuantityDto dto)
         {
             _logger.LogInformation("Service: Updating quantity for drug {DrugName}", drugName);
-            var result = await _repo.UpdateDrugQuantityAsync(drugName, dto.NewQuantity);
+            var result = await _repo.UpdateDrugQuantityAsync(drugName, dto.QuantityToAdd);
             var drug = await _drugService.GetByNameAsync(drugName);
             if (drug != null)
                 await _drugService.UpdateDrugStockAsync(drug.DrugId);

@@ -82,8 +82,8 @@ namespace PharmacyManagement.Services
             if (order == null)
                 throw new KeyNotFoundException($"Order with ID {dto.OrderId} not found.");
 
-            if (order.Status != "Dispensed")
-                throw new InvalidOperationException("Can only create sales from dispensed orders.");
+            if (order.Status != "Delivered")
+                throw new InvalidOperationException("Can only create sales from delivered orders.");
 
             var existingSale = await _context.Sales.FirstOrDefaultAsync(s => s.OrderId == dto.OrderId);
             if (existingSale != null)
