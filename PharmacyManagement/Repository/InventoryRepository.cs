@@ -167,7 +167,8 @@ namespace PharmacyManagement.Repository
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Updated quantity for Drug: {DrugName} to {NewQuantity}", drugName, newQuantity);
+            var safeDrugName = drugName.Replace("\r", string.Empty).Replace("\n", string.Empty);
+            _logger.LogInformation("Added {QuantityToAdd} units to Drug: {DrugName}", newQuantity, safeDrugName);
 
             return true;
 
