@@ -52,13 +52,6 @@ namespace PharmacyManagement.Controllers
             return Ok(analytics);
         }
 
-        [HttpPost("payment-intent/{orderId}")]
-        public async Task<IActionResult> CreatePaymentIntent(int orderId)
-        {
-            var result = await _paymentService.CreatePaymentIntentAsync(orderId);
-            return Ok(result);
-        }
-
         [HttpPost("confirm-payment")]
         public async Task<IActionResult> ConfirmPayment([FromBody] ConfirmPaymentDto dto)
         {

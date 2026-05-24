@@ -58,6 +58,15 @@ namespace PharmacyManagement.Middleware
                         errors = new List<string>()
                     };
                     break;
+                case InvalidOperationException:
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    response = new
+                    {
+                        success = false,
+                        message = "Invalid operation.",
+                        errors = new List<string> { exception.Message }
+                    };
+                    break;
                 case KeyNotFoundException:
                     context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     response = new

@@ -45,7 +45,7 @@ namespace PharmacyManagement.DTO
     public class UpdateInventoryQuantityDto
     {
         [Range(0, int.MaxValue)] 
-        public int NewQuantity { get; set; }
+        public int QuantityToAdd { get; set; }
        
     }
 }
