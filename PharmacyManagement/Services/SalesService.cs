@@ -92,9 +92,9 @@ namespace PharmacyManagement.Services
             var sale = new Sales
             {
                 Date = order.DateDispensed ?? DateTime.UtcNow,
-                TotalAmount = order.Drug.Price * order.Quantity,
+                TotalAmount = order.Drug.PricePerUnit * order.Quantity,
                 Quantity = order.Quantity,
-                UnitPrice = order.Drug.Price,
+                UnitPrice = order.Drug.PricePerUnit,
                 DrugId = order.DrugId,
                 OrderId = order.Id,
                 PaymentMethod = dto.PaymentMethod

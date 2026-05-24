@@ -281,6 +281,63 @@ namespace PharmacyManagement.Services
             await SendEmailAsync(email, subject, body);
         }
 
+        public async Task SendInvoiceEmailAsync(string toEmail, string name, int orderId, byte[] pdfBytes)
+        {
+            var subject = $"Invoice for Order #{orderId} - Pharmacy Management System";
+            var body = $@"
+                <html><body style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                    <div style='background-color: #667eea; padding: 20px; text-align: center;'>
+                        <h1 style='color: white; margin: 0;'>Pharmacy Management System</h1>
+                    </div>
+                    <div style='padding: 30px; background-color: #f9f9f9;'>
+                        <h2>Invoice for Order #{orderId}</h2>
+                        <p>Dear {name},</p>
+                        <p>Please find attached the invoice for your order <strong>#{orderId}</strong>.</p>
+                        <p>Thank you for using our pharmacy services.</p>
+                    </div>
+                    <div style='background-color: #333; padding: 15px; text-align: center;'>
+                        <p style='color: #aaa; margin: 0; font-size: 12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+
+            try
+            {
+                var smtpHost = _configuration["Email:SmtpHost"];
+                var smtpPort = int.Parse(_configuration["Email:SmtpPort"]!);
+                var senderEmail = _configuration["Email:SenderEmail"];
+                var senderName = _configuration["Email:SenderName"];
+                var password = _configuration["Email:Password"];
+
+                using var client = new System.Net.Mail.SmtpClient(smtpHost, smtpPort)
+                {
+                    Credentials = new System.Net.NetworkCredential(senderEmail, password),
+                    EnableSsl = true
+                };
+
+                var mailMessage = new System.Net.Mail.MailMessage
+                {
+                    From = new System.Net.Mail.MailAddress(senderEmail!, senderName),
+                    Subject = subject,
+                    Body = body,
+                    IsBodyHtml = true
+                };
+
+                mailMessage.To.Add(toEmail);
+                mailMessage.Attachments.Add(new System.Net.Mail.Attachment(
+                    new MemoryStream(pdfBytes),
+                    $"Invoice-Order-{orderId}.pdf",
+                    "application/pdf"
+                ));
+
+                await client.SendMailAsync(mailMessage);
+                _logger.LogInformation("Invoice email sent to {Email} for Order {OrderId}", toEmail, orderId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send invoice email to {Email}", toEmail);
+            }
+        }
+
         private static string GetStatusColor(string status) => status switch
         {
             "Delivered" => "#28a745",

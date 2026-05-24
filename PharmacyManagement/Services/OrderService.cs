@@ -17,6 +17,7 @@ namespace PharmacyManagement.Services
         private readonly IDrugsService _drugsService;
         private readonly IEmailService _emailService;
         private readonly IPaymentRepository _paymentRepository;
+        private readonly IInvoiceService _invoiceService;
         private readonly IMapper _mapper;
         private readonly ILogger<OrderService> _logger;
 
@@ -26,6 +27,7 @@ namespace PharmacyManagement.Services
             IDrugsService drugsService,
             IEmailService emailService,
             IPaymentRepository paymentRepository,
+            IInvoiceService invoiceService,
             IMapper mapper,
             ILogger<OrderService> logger,
             IConfiguration configuration)
@@ -35,6 +37,7 @@ namespace PharmacyManagement.Services
             _drugsService = drugsService;
             _emailService = emailService;
             _paymentRepository = paymentRepository;
+            _invoiceService = invoiceService;
             _mapper = mapper;
             _logger = logger;
             StripeConfiguration.ApiKey = configuration["Stripe:SecretKey"];
@@ -166,8 +169,14 @@ namespace PharmacyManagement.Services
 
                 var placer = await _context.Users.FindAsync(existing.PlacedById);
                 if (placer != null)
+                {
                     await _emailService.SendOrderStatusEmailAsync(
                         placer.Email!, placer.UserName!, existing.Id, existing.Drug?.Name ?? "Drug", "Delivered");
+
+                    // Generate and email invoice
+                    var invoicePdf = await _invoiceService.GenerateInvoiceAsync(existing.Id);
+                    await _emailService.SendInvoiceEmailAsync(placer.Email!, placer.UserName!, existing.Id, invoicePdf);
+                }
             }
             else if (oldStatus == "Delivered" && dto.Status != "Delivered")
             {
@@ -206,7 +215,7 @@ namespace PharmacyManagement.Services
         {
             if (paymentMethod == "Online")
             {
-                var amountInCents = (long)(drug.Price * order.Quantity * 100);
+                var amountInCents = (long)(drug.PricePerUnit * order.Quantity * 100);
 
                 var options = new PaymentIntentCreateOptions
                 {
@@ -226,7 +235,7 @@ namespace PharmacyManagement.Services
                 {
                     PaymentIntentId = intent.Id,
                     Status = "Pending",
-                    Amount = drug.Price * order.Quantity,
+                    Amount = drug.PricePerUnit * order.Quantity,
                     Currency = "usd",
                     PaymentMethod = "Online",
                     OrderId = order.Id
@@ -241,7 +250,7 @@ namespace PharmacyManagement.Services
                 {
                     PaymentIntentId = $"CASH-{order.Id}",
                     Status = "Pending",
-                    Amount = drug.Price * order.Quantity,
+                    Amount = drug.PricePerUnit * order.Quantity,
                     Currency = "usd",
                     PaymentMethod = "Cash",
                     OrderId = order.Id
@@ -262,9 +271,9 @@ namespace PharmacyManagement.Services
             var sale = new Sales
             {
                 Date = order.DateDispensed ?? DateTime.UtcNow,
-                TotalAmount = drug.Price * order.Quantity,
+                TotalAmount = drug.PricePerUnit * order.Quantity,
                 Quantity = order.Quantity,
-                UnitPrice = drug.Price,
+                UnitPrice = drug.PricePerUnit,
                 DrugId = order.DrugId,
                 OrderId = order.Id,
                 PaymentMethod = order.PaymentMethod

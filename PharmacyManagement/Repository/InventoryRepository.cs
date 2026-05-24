@@ -94,8 +94,8 @@ namespace PharmacyManagement.Repository
                 drug = new Drug
                 {
                     Name = drugName,
-                    Manufacturer = "TBD", // To Be Determined
-                    Price = 0,
+                    Manufacturer = "TBD",
+                    PricePerUnit = 0,
                     Stock = 0,
                     StorageInstructions = "Pending catalog entry",
                     IsPrescriptionRequired = false

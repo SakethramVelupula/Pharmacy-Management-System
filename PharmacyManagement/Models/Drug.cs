@@ -13,7 +13,7 @@ namespace PharmacyManagement.Models
         [Required]
         public string Manufacturer { get; set; }
         [Required]
-        public decimal Price { get; set; }
+        public decimal PricePerUnit { get; set; }
         [Required]
         public int Stock { get; set; }
         [MaxLength(250)]
