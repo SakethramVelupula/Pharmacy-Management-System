@@ -27,8 +27,8 @@ namespace PharmacyManagement.Tests.Controllers
         {
             var drugList = new List<DrugDto>
             {
-                new DrugDto { DrugId = 1, Name = "Paracetamol", Manufacturer = "ABC Pharma", Price = 10, Stock = 100 },
-                new DrugDto { DrugId = 2, Name = "Ibuprofen", Manufacturer = "XYZ Pharma", Price = 15, Stock = 50 }
+                new DrugDto { DrugId = 1, Name = "Paracetamol", Manufacturer = "ABC Pharma", PricePerUnit = 10, Stock = 100 },
+                new DrugDto { DrugId = 2, Name = "Ibuprofen", Manufacturer = "XYZ Pharma", PricePerUnit = 15, Stock = 50 }
             };
             _mockDrugService.Setup(s => s.GetAllDrugsAsync()).ReturnsAsync(drugList);
 
@@ -56,7 +56,7 @@ namespace PharmacyManagement.Tests.Controllers
         [Test]
         public async Task GetDrugById_ReturnsOk_WhenDrugExists()
         {
-            var drug = new DrugDto { DrugId = 1, Name = "Paracetamol", Manufacturer = "ABC Pharma", Price = 10, Stock = 100 };
+            var drug = new DrugDto { DrugId = 1, Name = "Paracetamol", Manufacturer = "ABC Pharma", PricePerUnit = 10, Stock = 100 };
             _mockDrugService.Setup(s => s.GetDrugByIdAsync(1)).ReturnsAsync(drug);
 
             var result = await _controller.GetDrugById(1);
@@ -83,8 +83,8 @@ namespace PharmacyManagement.Tests.Controllers
         [Test]
         public async Task CreateDrug_ReturnsCreatedAtAction_WhenSuccessful()
         {
-            var createDto = new CreateDrugDto { Name = "Amoxicillin", Manufacturer = "HealthCorp", Price = 25 };
-            var createdDrug = new DrugDto { DrugId = 3, Name = "Amoxicillin", Manufacturer = "HealthCorp", Price = 25, Stock = 0 };
+            var createDto = new CreateDrugDto { Name = "Amoxicillin", Manufacturer = "HealthCorp", PricePerUnit = 25 };
+            var createdDrug = new DrugDto { DrugId = 3, Name = "Amoxicillin", Manufacturer = "HealthCorp", PricePerUnit = 25, Stock = 0 };
             _mockDrugService.Setup(s => s.AddDrugAsync(createDto)).ReturnsAsync(createdDrug);
 
             var result = await _controller.AddDrug(createDto);
@@ -100,8 +100,8 @@ namespace PharmacyManagement.Tests.Controllers
         [Test]
         public async Task UpdateDrug_ReturnsOk_WhenDrugExists()
         {
-            var updateDto = new UpdateDrugDto { Name = "Paracetamol", Manufacturer = "ABC Pharma", Price = 12 };
-            var updatedDrug = new DrugDto { DrugId = 1, Name = "Paracetamol", Manufacturer = "ABC Pharma", Price = 12, Stock = 100 };
+            var updateDto = new UpdateDrugDto { Name = "Paracetamol", Manufacturer = "ABC Pharma", PricePerUnit = 12 };
+            var updatedDrug = new DrugDto { DrugId = 1, Name = "Paracetamol", Manufacturer = "ABC Pharma", PricePerUnit = 12, Stock = 100 };
             _mockDrugService.Setup(s => s.UpdateDrugAsync(1, updateDto)).ReturnsAsync(updatedDrug);
 
             var result = await _controller.UpdateDrug(1, updateDto);
@@ -110,13 +110,13 @@ namespace PharmacyManagement.Tests.Controllers
             ClassicAssert.IsNotNull(okResult);
             ClassicAssert.AreEqual(200, okResult.StatusCode);
             var returnedDrug = okResult.Value as DrugDto;
-            ClassicAssert.AreEqual(12, returnedDrug.Price);
+            ClassicAssert.AreEqual(12, returnedDrug.PricePerUnit);
         }
 
         [Test]
         public async Task UpdateDrug_ReturnsNotFound_WhenDrugDoesNotExist()
         {
-            var updateDto = new UpdateDrugDto { Name = "Ghost", Manufacturer = "None", Price = 1 };
+            var updateDto = new UpdateDrugDto { Name = "Ghost", Manufacturer = "None", PricePerUnit = 1 };
             _mockDrugService.Setup(s => s.UpdateDrugAsync(99, updateDto)).ReturnsAsync((DrugDto)null);
 
             var result = await _controller.UpdateDrug(99, updateDto);

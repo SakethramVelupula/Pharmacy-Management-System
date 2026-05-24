@@ -39,7 +39,7 @@ namespace PharmacyManagement.Services
             if (order.Status != "Processing" && order.Status != "Pending")
                 throw new InvalidOperationException("Payment can only be initiated for Pending or Processing orders.");
 
-            var amountInCents = (long)(order.Drug.Price * order.Quantity * 100);
+            var amountInCents = (long)(order.Drug.PricePerUnit * order.Quantity * 100);
 
             var options = new PaymentIntentCreateOptions
             {
@@ -59,7 +59,7 @@ namespace PharmacyManagement.Services
             {
                 PaymentIntentId = intent.Id,
                 Status = "Pending",
-                Amount = order.Drug.Price * order.Quantity,
+                Amount = order.Drug.PricePerUnit * order.Quantity,
                 Currency = "usd",
                 OrderId = orderId
             });
@@ -68,7 +68,7 @@ namespace PharmacyManagement.Services
             {
                 PaymentIntentId = intent.Id,
                 ClientSecret = intent.ClientSecret,
-                Amount = order.Drug.Price * order.Quantity,
+                Amount = order.Drug.PricePerUnit * order.Quantity,
                 Currency = "usd",
                 Status = intent.Status
             };
@@ -96,9 +96,9 @@ namespace PharmacyManagement.Services
             var sale = new Sales
             {
                 Date = DateTime.UtcNow,
-                TotalAmount = order.Drug.Price * order.Quantity,
+                TotalAmount = order.Drug.PricePerUnit * order.Quantity,
                 Quantity = order.Quantity,
-                UnitPrice = order.Drug.Price,
+                UnitPrice = order.Drug.PricePerUnit,
                 DrugId = order.DrugId,
                 OrderId = order.Id,
                 PaymentMethod = dto.PaymentMethod
