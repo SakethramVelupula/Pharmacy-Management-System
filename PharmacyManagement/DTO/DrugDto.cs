@@ -7,7 +7,7 @@ namespace PharmacyManagement.DTO
         public int DrugId { get; set; }
         public string Name { get; set; }
         public string Manufacturer { get; set; }
-        public decimal Price { get; set; }
+        public decimal PricePerUnit { get; set; }
         public int Stock { get; set; }
         public string? StorageInstructions { get; set; }
         public bool IsPrescriptionRequired { get; set; }
@@ -22,7 +22,7 @@ namespace PharmacyManagement.DTO
         [Required]
         public string Manufacturer { get; set; }
         [Range(0.01, 10000)]
-        public decimal Price { get; set; }
+        public decimal PricePerUnit { get; set; }
         [MaxLength(250)]
         public string? StorageInstructions { get; set; }
         public bool IsPrescriptionRequired { get; set; } = false;
@@ -38,7 +38,7 @@ namespace PharmacyManagement.DTO
         public string Manufacturer { get; set; }
         [Required]
         [Range(0.01, 10000)]
-        public decimal Price { get; set; }
+        public decimal PricePerUnit { get; set; }
         [MaxLength(250)]
         public string? StorageInstructions { get; set; }
         public bool IsPrescriptionRequired { get; set; }
