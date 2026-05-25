@@ -338,6 +338,80 @@ namespace PharmacyManagement.Services
             }
         }
 
+        public async Task SendRefundRequestedAsync(string adminEmail, string requesterName, int orderId, string reason, string refundType)
+        {
+            var subject = $"Refund Request for Order #{orderId} - {refundType}";
+            var body = $@"
+                <html><body style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;'>
+                    <div style='background-color:#667eea;padding:20px;text-align:center;'>
+                        <h1 style='color:white;margin:0;'>Pharmacy Management System</h1>
+                    </div>
+                    <div style='padding:30px;background-color:#f9f9f9;'>
+                        <h2>New Refund Request</h2>
+                        <p>A refund request has been submitted and requires your review.</p>
+                        <table style='width:100%;border-collapse:collapse;'>
+                            <tr style='background-color:#667eea;color:white;'>
+                                <th style='padding:10px;text-align:left;'>Field</th>
+                                <th style='padding:10px;text-align:left;'>Details</th>
+                            </tr>
+                            <tr style='background-color:white;'>
+                                <td style='padding:10px;border:1px solid #ddd;'>Order ID</td>
+                                <td style='padding:10px;border:1px solid #ddd;'>#{orderId}</td>
+                            </tr>
+                            <tr style='background-color:#f2f2f2;'>
+                                <td style='padding:10px;border:1px solid #ddd;'>Requested By</td>
+                                <td style='padding:10px;border:1px solid #ddd;'>{requesterName}</td>
+                            </tr>
+                            <tr style='background-color:white;'>
+                                <td style='padding:10px;border:1px solid #ddd;'>Refund Type</td>
+                                <td style='padding:10px;border:1px solid #ddd;'>{refundType}</td>
+                            </tr>
+                            <tr style='background-color:#f2f2f2;'>
+                                <td style='padding:10px;border:1px solid #ddd;'>Reason</td>
+                                <td style='padding:10px;border:1px solid #ddd;'>{reason}</td>
+                            </tr>
+                        </table>
+                        <p style='margin-top:20px;'>Please login to the admin panel to review this request.</p>
+                    </div>
+                    <div style='background-color:#333;padding:15px;text-align:center;'>
+                        <p style='color:#aaa;margin:0;font-size:12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+            await SendEmailAsync(adminEmail, subject, body);
+        }
+
+        public async Task SendRefundProcessedAsync(string toEmail, string name, int orderId, bool isApproved, decimal amount, string refundMethod, string? adminNotes)
+        {
+            var subject = isApproved
+                ? $"Your Refund for Order #{orderId} Has Been Approved"
+                : $"Your Refund Request for Order #{orderId} Was Rejected";
+
+            var statusColor = isApproved ? "#d4edda" : "#f8d7da";
+            var borderColor = isApproved ? "#28a745" : "#dc3545";
+            var statusText = isApproved ? $"✅ Approved — ${amount:F2} will be refunded via {refundMethod}" : "❌ Rejected";
+
+            var body = $@"
+                <html><body style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;'>
+                    <div style='background-color:#667eea;padding:20px;text-align:center;'>
+                        <h1 style='color:white;margin:0;'>Pharmacy Management System</h1>
+                    </div>
+                    <div style='padding:30px;background-color:#f9f9f9;'>
+                        <h2>Refund Request Update</h2>
+                        <p>Dear {name},</p>
+                        <p>Your refund request for Order <strong>#{orderId}</strong> has been reviewed.</p>
+                        <div style='background-color:{statusColor};padding:15px;border-radius:6px;border-left:4px solid {borderColor};'>
+                            <p style='margin:0;'><strong>{statusText}</strong></p>
+                        </div>
+                        {(adminNotes != null ? $"<p style='margin-top:20px;'><strong>Admin Notes:</strong> {adminNotes}</p>" : "")}
+                        <p style='margin-top:20px;'>If you have any questions, please contact the pharmacy.</p>
+                    </div>
+                    <div style='background-color:#333;padding:15px;text-align:center;'>
+                        <p style='color:#aaa;margin:0;font-size:12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+            await SendEmailAsync(toEmail, subject, body);
+        }
+
         private static string GetStatusColor(string status) => status switch
         {
             "Delivered" => "#28a745",

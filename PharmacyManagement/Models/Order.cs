@@ -9,7 +9,7 @@ namespace PharmacyManagement.Models
         public string PlacedById { get; set; }
         public int DrugId { get; set; }
         public int Quantity { get; set; }
-        public string Status { get; set; } = "Pending";
+        public string Status { get; set; } = "Pending"; // Pending / Processing / Delivered / Cancelled / Returned
         public DateTime PlacedAt { get; set; } = DateTime.Now;
 
         public Drug Drug { get; set; }
