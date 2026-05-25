@@ -41,6 +41,8 @@ builder.Services.AddScoped<ISpecialOrderRepository, SpecialOrderRepository>();
 builder.Services.AddScoped<ISpecialOrderService, SpecialOrderService>();
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<IRefundRepository, RefundRepository>();
+builder.Services.AddScoped<IRefundService, RefundService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddHostedService<ExpiryCheckerService>();
