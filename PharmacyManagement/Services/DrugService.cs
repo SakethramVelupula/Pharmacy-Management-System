@@ -9,10 +9,13 @@ namespace PharmacyManagement.Services
     {
         private readonly IDrugRepository _repo;
         private readonly IMapper _mapper;
-        public DrugService(IDrugRepository repo, IMapper mapper)
+        private readonly IAuditService _auditService;
+
+        public DrugService(IDrugRepository repo, IMapper mapper, IAuditService auditService)
         {
             _repo = repo;
             _mapper = mapper;
+            _auditService = auditService;
         }
         public async Task<IEnumerable<DrugDto>> GetAllDrugsAsync()
         {
@@ -24,28 +27,26 @@ namespace PharmacyManagement.Services
             var drug = await _repo.GetByIdAsync(id);
             return drug == null ? null : _mapper.Map<DrugDto>(drug);
         }
-        public async Task<DrugDto> AddDrugAsync(CreateDrugDto createDrugDto)
+        public async Task<DrugDto> AddDrugAsync(CreateDrugDto createDrugDto, string performedById)
         {
             var drug = _mapper.Map<Drug>(createDrugDto);
-            drug.Stock = 0; // Stock starts at 0
+            drug.Stock = 0;
             var added = await _repo.AddAsync(drug);
-            
-            // Sync stock from existing inventory if any
             await UpdateDrugStockAsync(added.DrugId);
-            
+            await _auditService.LogAsync("Drug", added.DrugId.ToString(), "Created", performedById,
+                $"Drug '{added.Name}' created by admin.");
             return _mapper.Map<DrugDto>(added);
         }
-        public async Task<DrugDto?> UpdateDrugAsync(int id, UpdateDrugDto updateDrugDto)
+        public async Task<DrugDto?> UpdateDrugAsync(int id, UpdateDrugDto updateDrugDto, string performedById)
         {
             var existing = await _repo.GetByIdAsync(id);
-            if (existing == null)
-            {
-                return null;
-            }
-            var currentStock = existing.Stock; // Preserve current stock
+            if (existing == null) return null;
+            var currentStock = existing.Stock;
             _mapper.Map(updateDrugDto, existing);
-            existing.Stock = currentStock; // Restore stock value
+            existing.Stock = currentStock;
             var updated = await _repo.UpdateAsync(existing);
+            await _auditService.LogAsync("Drug", id.ToString(), "Updated", performedById,
+                $"Drug '{existing.Name}' updated by admin.");
             return _mapper.Map<DrugDto>(updated);
         }
 

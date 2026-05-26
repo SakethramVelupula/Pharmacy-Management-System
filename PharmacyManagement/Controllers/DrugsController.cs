@@ -4,6 +4,7 @@ using PharmacyManagement.Services;
 using PharmacyManagement.Models;
 using PharmacyManagement.Interface;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace PharmacyManagement.Controllers
 {
@@ -38,7 +39,8 @@ namespace PharmacyManagement.Controllers
         [Authorize(Roles ="Admin")]
         public async Task<IActionResult> AddDrug([FromBody] CreateDrugDto createDrugdto)
         {
-            var added = await _service.AddDrugAsync(createDrugdto);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            var added = await _service.AddDrugAsync(createDrugdto, userId);
             return CreatedAtAction(nameof(GetDrugById), new { id = added.DrugId }, added);
         }
         [HttpGet("low-stock")]
@@ -53,11 +55,10 @@ namespace PharmacyManagement.Controllers
         [Authorize(Roles ="Admin")]
         public async Task<IActionResult> UpdateDrug(int id, [FromBody] UpdateDrugDto updateDrugDto)
         {
-            var updated = await _service.UpdateDrugAsync(id, updateDrugDto);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            var updated = await _service.UpdateDrugAsync(id, updateDrugDto, userId);
             if (updated == null)
-            {
                 return NotFound($"Drug with Id:{id} not found");
-            }
             return Ok(updated);
         }
 

@@ -18,6 +18,7 @@ namespace PharmacyManagement.Services
         private readonly IEmailService _emailService;
         private readonly IPaymentRepository _paymentRepository;
         private readonly IInvoiceService _invoiceService;
+        private readonly IAuditService _auditService;
         private readonly IMapper _mapper;
         private readonly ILogger<OrderService> _logger;
 
@@ -28,6 +29,7 @@ namespace PharmacyManagement.Services
             IEmailService emailService,
             IPaymentRepository paymentRepository,
             IInvoiceService invoiceService,
+            IAuditService auditService,
             IMapper mapper,
             ILogger<OrderService> logger,
             IConfiguration configuration)
@@ -38,6 +40,7 @@ namespace PharmacyManagement.Services
             _emailService = emailService;
             _paymentRepository = paymentRepository;
             _invoiceService = invoiceService;
+            _auditService = auditService;
             _mapper = mapper;
             _logger = logger;
             StripeConfiguration.ApiKey = configuration["Stripe:SecretKey"];
@@ -94,7 +97,8 @@ namespace PharmacyManagement.Services
                 drug.Name,
                 dto.Quantity
             );
-
+            await _auditService.LogAsync("Order", createdOrder.Id.ToString(), "Created", userId,
+                $"Order #{createdOrder.Id} created for drug '{drug.Name}', quantity: {dto.Quantity}, payment: {dto.PaymentMethod}.");
             return result;
         }
 
@@ -142,7 +146,8 @@ namespace PharmacyManagement.Services
                 drug.Name,
                 dto.Quantity
             );
-
+            await _auditService.LogAsync("Order", createdOrder.Id.ToString(), "Created", userId,
+                $"Patient order #{createdOrder.Id} created for drug '{drug.Name}', quantity: {dto.Quantity}, payment: {dto.PaymentMethod}.");
             return result;
         }
 
@@ -193,6 +198,8 @@ namespace PharmacyManagement.Services
             }
 
             var updated = await _orderRepository.UpdateOrderAsync(existing);
+            await _auditService.LogAsync("Order", id.ToString(), "Updated", existing.PlacedById,
+                $"Order #{id} status changed to '{dto.Status}'.");
             return _mapper.Map<OrderDto?>(updated);
         }
 
@@ -209,8 +216,6 @@ namespace PharmacyManagement.Services
 
             return await _orderRepository.DeleteOrderAsync(id);
         }
-
-        // Returns ClientSecret for Online payments, null for Cash
         private async Task<string?> HandlePaymentOnOrderCreation(Order order, Drug drug, string paymentMethod)
         {
             if (paymentMethod == "Online")

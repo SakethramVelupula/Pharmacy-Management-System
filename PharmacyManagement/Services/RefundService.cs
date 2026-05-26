@@ -19,6 +19,7 @@ namespace PharmacyManagement.Services
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly IDrugsService _drugsService;
+        private readonly IAuditService _auditService;
         private readonly ILogger<RefundService> _logger;
 
         public RefundService(
@@ -26,6 +27,7 @@ namespace PharmacyManagement.Services
             ApplicationDbContext context,
             IEmailService emailService,
             IDrugsService drugsService,
+            IAuditService auditService,
             ILogger<RefundService> logger,
             IConfiguration configuration)
         {
@@ -33,6 +35,7 @@ namespace PharmacyManagement.Services
             _context = context;
             _emailService = emailService;
             _drugsService = drugsService;
+            _auditService = auditService;
             _logger = logger;
             StripeConfiguration.ApiKey = configuration["Stripe:SecretKey"];
         }
@@ -86,6 +89,8 @@ namespace PharmacyManagement.Services
                     dto.RefundType);
 
             _logger.LogInformation("Refund request created for Order {OrderId} by User {UserId}", dto.OrderId, userId);
+            await _auditService.LogAsync("Refund", created.RefundId.ToString(), "Created", userId,
+                $"Refund requested for Order #{dto.OrderId}, type: {dto.RefundType}, reason: {dto.Reason}.");
             return MapToDto(created);
         }
 
@@ -161,6 +166,8 @@ namespace PharmacyManagement.Services
                     true, refund.Amount, refund.RefundMethod, dto.AdminNotes);
 
             _logger.LogInformation("Refund {RefundId} processed for Order {OrderId}", refundId, refund.OrderId);
+            await _auditService.LogAsync("Refund", refundId.ToString(), dto.IsApproved ? "Approved" : "Rejected", "admin",
+                $"Refund #{refundId} for Order #{refund.OrderId} {(dto.IsApproved ? "approved and processed" : "rejected")}.");
             return MapToDto(refund);
         }
 
