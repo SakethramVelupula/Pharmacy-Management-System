@@ -14,14 +14,16 @@ namespace PharmacyManagement.Services
         private readonly IDrugsService _drugService;
         private readonly IMapper _mapper;
         private readonly ILogger<InventoryService> _logger;
+        private readonly IAuditService _auditService;
         private readonly int _expiryWarningDays;
 
-        public InventoryService(IInventoryRepository repo, IDrugsService drugService, IMapper mapper, ILogger<InventoryService> logger, IConfiguration configuration)
+        public InventoryService(IInventoryRepository repo, IDrugsService drugService, IMapper mapper, ILogger<InventoryService> logger, IConfiguration configuration, IAuditService auditService)
         {
             _repo = repo;
             _drugService = drugService;
             _mapper = mapper;
             _logger = logger;
+            _auditService = auditService;
             _expiryWarningDays = configuration.GetValue<int>("DrugExpiry:ExpiryWarningDays", 90);
         }
 
@@ -43,23 +45,27 @@ namespace PharmacyManagement.Services
             return _mapper.Map<ReadInventoryDto?>(data);
         }
 
-        public async Task<bool> AddDrugToInventoryAsync(AddInventoryDto dto)
+        public async Task<bool> AddDrugToInventoryAsync(AddInventoryDto dto, string performedById)
         {
             _logger.LogInformation("Service: Adding inventory for drug {DrugName}", dto.DrugName);
             var result = await _repo.AddDrugToInventoryAsync(dto.DrugName, dto.SupplierId, dto.Quantity, dto.ExpiryDate);
             var drug = await _drugService.GetByNameAsync(dto.DrugName);
             if (drug != null)
                 await _drugService.UpdateDrugStockAsync(drug.DrugId);
+            await _auditService.LogAsync("Inventory", null, "Created", performedById,
+                $"Inventory added for drug '{dto.DrugName}', quantity: {dto.Quantity}.");
             return result;
         }
 
-        public async Task<bool> UpdateDrugQuantityAsync(string drugName, UpdateInventoryQuantityDto dto)
+        public async Task<bool> UpdateDrugQuantityAsync(string drugName, UpdateInventoryQuantityDto dto, string performedById)
         {
             _logger.LogInformation("Service: Updating quantity for drug {DrugName}", drugName);
             var result = await _repo.UpdateDrugQuantityAsync(drugName, dto.QuantityToAdd);
             var drug = await _drugService.GetByNameAsync(drugName);
             if (drug != null)
                 await _drugService.UpdateDrugStockAsync(drug.DrugId);
+            await _auditService.LogAsync("Inventory", null, "Updated", performedById,
+                $"Inventory updated for drug '{drugName}', added quantity: {dto.QuantityToAdd}.");
             return result;
         }
 

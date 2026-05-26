@@ -12,13 +12,15 @@ namespace PharmacyManagement.Services
     {
         private readonly IAuthRepository _authRepository;
         private readonly IEmailService _emailService;
+        private readonly IAuditService _auditService;
         private readonly IMapper _mapper;
         private readonly int _licenseWarningDays;
 
-        public AuthService(IAuthRepository authRepository, IEmailService emailService, IMapper mapper, IConfiguration configuration)
+        public AuthService(IAuthRepository authRepository, IEmailService emailService, IAuditService auditService, IMapper mapper, IConfiguration configuration)
         {
             _authRepository = authRepository;
             _emailService = emailService;
+            _auditService = auditService;
             _mapper = mapper;
             _licenseWarningDays = configuration.GetValue<int>("LicenseExpiry:WarningDays", 30);
         }
@@ -71,9 +73,17 @@ namespace PharmacyManagement.Services
             return isSuccess ? "Patient registration successful." : $"Registration failed: {message}";
         }
 
-        public Task<string?> LoginAsync(LoginDto model)
+        public async Task<string?> LoginAsync(LoginDto model)
         {
-            return _authRepository.LoginAsync(model.Email, model.Password);
+            var result = await _authRepository.LoginAsync(model.Email, model.Password);
+            if (result != null)
+            {
+                var user = await _authRepository.GetUserByEmailAsync(model.Email);
+                if (user != null)
+                    await _auditService.LogAsync("User", user.Id, "Login", user.Id,
+                        $"User '{user.UserName}' logged in.");
+            }
+            return result;
         }
 
         public async Task<string?> LoginAdminAsync(LoginDto model)
@@ -104,6 +114,9 @@ namespace PharmacyManagement.Services
                 await _emailService.SendDoctorApprovedAsync(doctor.Email!, doctor.UserName!);
             else
                 await _emailService.SendDoctorRejectedAsync(doctor.Email!, doctor.UserName!, dto.RejectionReason ?? "No reason provided.");
+
+            await _auditService.LogAsync("User", doctor.Id, dto.IsApproved ? "Approved" : "Rejected", dto.DoctorId,
+                $"Doctor '{doctor.UserName}' was {(dto.IsApproved ? "approved" : "rejected")}.");
 
             return dto.IsApproved ? "Doctor approved successfully." : "Doctor rejected successfully.";
         }
