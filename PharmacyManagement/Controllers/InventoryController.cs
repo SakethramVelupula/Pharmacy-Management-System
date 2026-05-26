@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PharmacyManagement.DTO;
 using PharmacyManagement.Interface;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace PharmacyManagement.Controllers
@@ -53,7 +54,8 @@ namespace PharmacyManagement.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                await _service.AddDrugToInventoryAsync(dto);
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+                await _service.AddDrugToInventoryAsync(dto, userId);
                 return Ok(new { Message = $"Inventory for {dto.DrugName} added/updated successfully." });
             }
             catch (KeyNotFoundException ex)
@@ -72,7 +74,8 @@ namespace PharmacyManagement.Controllers
         public async Task<IActionResult> UpdateQuantity(string drugName, [FromBody] UpdateInventoryQuantityDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            await _service.UpdateDrugQuantityAsync(drugName, dto);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            await _service.UpdateDrugQuantityAsync(drugName, dto, userId);
             return Ok(new { Message = $"Inventory quantity updated for {drugName}." });
         }
 
