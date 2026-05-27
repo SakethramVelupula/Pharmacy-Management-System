@@ -136,5 +136,31 @@ namespace PharmacyManagement.Controllers
             var result = await _authService.GetExpiringLicensesAsync(days);
             return Ok(result);
         }
+
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _authService.ForgotPasswordAsync(dto.Email);
+            return Ok(new { Message = result });
+        }
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _authService.ResetPasswordAsync(dto);
+
+            if (result.Contains("failed", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { Message = result });
+
+            return Ok(new { Message = result });
+        }
     }
 }

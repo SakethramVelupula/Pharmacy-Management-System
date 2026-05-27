@@ -15,5 +15,6 @@ namespace PharmacyManagement.Interface
         Task SendInvoiceEmailAsync(string toEmail, string name, int orderId, byte[] pdfBytes);
         Task SendRefundRequestedAsync(string adminEmail, string requesterName, int orderId, string reason, string refundType);
         Task SendRefundProcessedAsync(string toEmail, string name, int orderId, bool isApproved, decimal amount, string refundMethod, string? adminNotes);
+        Task SendPasswordResetEmailAsync(string toEmail, string name, string resetToken);
     }
 }
