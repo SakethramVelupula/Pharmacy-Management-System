@@ -412,6 +412,32 @@ namespace PharmacyManagement.Services
             await SendEmailAsync(toEmail, subject, body);
         }
 
+        public async Task SendPasswordResetEmailAsync(string toEmail, string name, string resetToken)
+        {
+            var subject = "Password Reset Request - Pharmacy Management System";
+            var body = $@"
+                <html><body style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;'>
+                    <div style='background-color:#667eea;padding:20px;text-align:center;'>
+                        <h1 style='color:white;margin:0;'>Pharmacy Management System</h1>
+                    </div>
+                    <div style='padding:30px;background-color:#f9f9f9;'>
+                        <h2>Password Reset Request</h2>
+                        <p>Dear {name},</p>
+                        <p>We received a request to reset your password. Use the token below to reset it:</p>
+                        <div style='background-color:#e8f4fd;padding:20px;border-radius:6px;border-left:4px solid #667eea;text-align:center;'>
+                            <p style='margin:0;font-size:13px;color:#555;'>Your Password Reset Token:</p>
+                            <p style='margin:10px 0 0;font-size:14px;font-weight:bold;word-break:break-all;color:#333;'>{resetToken}</p>
+                        </div>
+                        <p style='margin-top:20px;'>Use this token with your email at <strong>POST api/authentication/reset-password</strong>.</p>
+                        <p>This token expires in <strong>1 hour</strong>. If you did not request a password reset, please ignore this email.</p>
+                    </div>
+                    <div style='background-color:#333;padding:15px;text-align:center;'>
+                        <p style='color:#aaa;margin:0;font-size:12px;'>Pharmacy Management System - Automated Notification</p>
+                    </div>
+                </body></html>";
+            await SendEmailAsync(toEmail, subject, body);
+        }
+
         private static string GetStatusColor(string status) => status switch
         {
             "Delivered" => "#28a745",

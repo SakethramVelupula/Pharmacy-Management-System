@@ -13,5 +13,7 @@ namespace PharmacyManagement.Interface
         Task<IEnumerable<PendingDoctorDto>> GetPendingDoctorsAsync();
         Task<LicenseValidationResultDto> ValidateLicenseAsync(string doctorId);
         Task<IEnumerable<ExpiringLicenseDto>> GetExpiringLicensesAsync(int? warningDays = null);
+        Task<string> ForgotPasswordAsync(string email);
+        Task<string> ResetPasswordAsync(ResetPasswordDto dto);
     }
 }
