@@ -166,5 +166,15 @@ namespace PharmacyManagement.Repository
                     && u.LicenseExpiryDate.Value.Date <= thresholdDate.Date)
                 .ToListAsync();
         }
+        public async Task<string> GeneratePasswordResetTokenAsync(User user)
+        {
+            return await _userManager.GeneratePasswordResetTokenAsync(user);
+        }
+
+        public async Task<bool> ResetPasswordAsync(User user, string token, string newPassword)
+        {
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+            return result.Succeeded;
+        }
     }
 }

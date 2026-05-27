@@ -72,6 +72,8 @@ namespace PharmacyManagement.DTO
         public string? RejectionReason { get; set; }
     }
 
+
+
     public class PendingDoctorDto
     {
         public string Id { get; set; }

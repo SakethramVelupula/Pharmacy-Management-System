@@ -181,5 +181,36 @@ namespace PharmacyManagement.Services
                 DaysUntilExpiry = (d.LicenseExpiryDate.Value.Date - DateTime.UtcNow.Date).Days
             });
         }
+
+        public async Task<string> ForgotPasswordAsync(string email)
+        {
+            var user = await _authRepository.GetUserByEmailAsync(email);
+            if (user == null)
+                return "If this email is registered, a reset link has been sent.";
+
+            var token = await _authRepository.GeneratePasswordResetTokenAsync(user);
+            await _emailService.SendPasswordResetEmailAsync(user.Email!, user.UserName!, token);
+
+            await _auditService.LogAsync("User", user.Id, "PasswordResetRequested", user.Id,
+                $"Password reset requested for user '{user.UserName}'.");
+
+            return "If this email is registered, a reset link has been sent.";
+        }
+
+        public async Task<string> ResetPasswordAsync(ResetPasswordDto dto)
+        {
+            var user = await _authRepository.GetUserByEmailAsync(dto.Email);
+            if (user == null)
+                return "Password reset failed.";
+
+            var success = await _authRepository.ResetPasswordAsync(user, dto.Token, dto.NewPassword);
+            if (!success)
+                return "Password reset failed. Token may be invalid or expired.";
+
+            await _auditService.LogAsync("User", user.Id, "PasswordReset", user.Id,
+                $"Password successfully reset for user '{user.UserName}'.");
+
+            return "Password reset successful.";
+        }
     }
 }
